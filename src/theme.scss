@@ -1,0 +1,325 @@
+// ============================================================
+// Navigator — Green theme example
+// docs/theme/green.scss
+//
+// A dark-navbar, green-accent theme inspired by GPS/trail apps.
+// Copy this file into your project, adjust the palette in §2,
+// and import it instead of @ogis/navigator/navigator.css.
+//
+// ⚠ MapLibre GL JS CSS is NOT included here. Import it
+//   separately in your application entry point BEFORE this file:
+//     import "maplibre-gl/dist/maplibre-gl.css"
+//
+// Palette
+// ─────────────────────────────────────────────────────────
+//   $nav-green   #39d353  — GPS marker green (primary accent)
+//   $nav-black   #111111  — near-black top bar
+//   $nav-white   #ffffff  — light-mode panel base
+//   $nav-ink     #1a1f1a  — body text in light mode
+//
+// Structure
+// ─────────────────────────────────────────────────────────
+// §1  Bootstrap functions    (required first)
+// §2  Theme palette          (edit these to retheme)
+// §3  Bootstrap overrides
+// §4  Bootstrap infrastructure
+// §5  Full Bootstrap component set
+// §6  Navigator component overrides
+//       a  Top navigation bar
+//       b  Side panel (Offcanvas)
+//       c  Panel navigation tabs
+//       d  Panel content sections
+//       e  Icon buttons
+//       f  Share URL textarea
+//       g  Navigator layout and component styles (required)
+// ============================================================
+
+// ── §1  Bootstrap functions ───────────────────────────────────
+
+@import "bootstrap/scss/functions";
+
+// ── §2  Theme palette ─────────────────────────────────────────
+// Edit these four variables to shift the entire theme.
+
+$nav-green: #39d353; // GPS marker green  — primary accent (links, active states, focus rings)
+$nav-black: #111111; // near-black        — always-dark top bar background
+$nav-white: #ffffff; // clean white       — light-mode panel base colour
+$nav-ink: #1a1f1a; // near-black green  — body text in light mode
+
+// ── §3  Bootstrap variable overrides ─────────────────────────
+
+// Brand
+$primary: $nav-green;
+
+// Body (light mode)
+$body-bg: $nav-white;
+$body-color: $nav-ink;
+
+// Borders
+$border-color: rgba(0, 0, 0, 0.09);
+$border-color-translucent: rgba(0, 0, 0, 0.09);
+
+// Panel geometry
+$offcanvas-horizontal-width: 340px;
+$offcanvas-transition-duration: 0.25s;
+
+// Typography
+$font-size-base: 0.9375rem; // 15 px
+
+// ── §4  Required Bootstrap infrastructure ─────────────────────
+
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/root";
+
+// ── §5  Full Bootstrap component set ──────────────────────────
+
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/images";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/tables";
+@import "bootstrap/scss/forms";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/transitions";
+@import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/nav";
+@import "bootstrap/scss/navbar";
+@import "bootstrap/scss/card";
+@import "bootstrap/scss/accordion";
+@import "bootstrap/scss/breadcrumb";
+@import "bootstrap/scss/pagination";
+@import "bootstrap/scss/badge";
+@import "bootstrap/scss/alert";
+@import "bootstrap/scss/progress";
+@import "bootstrap/scss/list-group";
+@import "bootstrap/scss/close";
+@import "bootstrap/scss/toasts";
+@import "bootstrap/scss/modal";
+@import "bootstrap/scss/tooltip";
+@import "bootstrap/scss/popover";
+@import "bootstrap/scss/carousel";
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/offcanvas";
+@import "bootstrap/scss/placeholders";
+@import "bootstrap/scss/helpers";
+@import "bootstrap/scss/utilities";
+@import "bootstrap/scss/utilities/api";
+
+// ── §6  Navigator component overrides ─────────────────────────
+
+:root {
+  --navigator-panel-width: #{$offcanvas-horizontal-width};
+}
+
+// §6a  Top navigation bar
+// Always rendered with data-bs-theme="dark". Near-black fill
+// keeps it as a strong, unambiguous anchor for the UI.
+
+.navigator-top .navbar {
+  background: rgba($nav-black, 0.95) !important;
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+// §6b  Side panel
+// Transparent enough that the map remains perceptible through
+// the panel in both light and dark modes.
+
+.navigator-panel {
+  --bs-offcanvas-bg: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-right: 1px solid rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 3px 0 28px rgba(0, 0, 0, 0.08);
+}
+
+[data-bs-theme="dark"] .navigator-panel {
+  --bs-offcanvas-bg: rgba(10, 18, 10, 0.82);
+  border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 3px 0 28px rgba(0, 0, 0, 0.4);
+}
+
+// §6c  Panel navigation tabs
+
+.panel-nav {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+[data-bs-theme="dark"] .panel-nav {
+  background: rgba(10, 18, 10, 0.94) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+// §6d  Panel content sections
+
+.sidebar-section.border-top {
+  border-top-color: rgba(0, 0, 0, 0.07) !important;
+}
+
+[data-bs-theme="dark"] .sidebar-section.border-top {
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+// §6e  Icon buttons
+// White icons in the dark top bar; green on active/hover.
+
+.icon-btn {
+  color: var(--bs-secondary-color);
+  transition: color 0.15s ease;
+
+  &[aria-pressed="true"],
+  &:hover {
+    color: var(--bs-primary);
+  }
+}
+
+[data-bs-theme="dark"] .icon-btn {
+  color: rgba(255, 255, 255, 0.55);
+
+  &[aria-pressed="true"],
+  &:hover {
+    color: var(--bs-primary);
+  }
+}
+
+// §6f  Share URL textarea
+
+.navigator-share-textarea {
+  resize: none;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-tertiary-bg);
+  border-color: var(--bs-border-color-translucent);
+  cursor: text;
+
+  &:focus {
+    color: var(--bs-body-color);
+    background-color: var(--bs-secondary-bg);
+    border-color: rgba(var(--bs-primary-rgb), 0.4);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.12);
+  }
+}
+
+// §6g  Navigator layout and component styles
+// These structural styles are required for Navigator to render
+// correctly. They do not depend on the theme palette — copy
+// them verbatim into any custom theme.
+
+// Map container
+.navigator-map {
+  z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition:
+    left 0.3s ease,
+    width 0.3s ease;
+}
+
+.navigator-map.panel-open {
+  left: var(--navigator-panel-width, 340px);
+  width: calc(100% - var(--navigator-panel-width, 340px));
+}
+
+// Top navigation bar container
+.navigator-top {
+  z-index: 1040;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.navigator-top nav.navbar {
+  touch-action: pan-x pan-y;
+}
+
+.navigator-top .navbar-toggler:focus {
+  box-shadow: none;
+  border: 0;
+  outline: none;
+}
+
+// Side panel — positioned below the top bar
+.navigator-panel {
+  top: 86px !important;
+  height: calc(100% - 73px) !important;
+}
+
+// Panel navigation tab row
+.panel-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 5rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.panel-nav .icon-btn {
+  flex: 1 0 calc(100% / 4);
+}
+
+// Icon buttons (panel nav + top bar)
+.icon-btn {
+  cursor: pointer;
+  line-height: 1;
+  position: relative;
+  padding: 4px 4px 18px;
+
+  &:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.icon-btn__label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+// OGIS logo in the About panel
+.ogis-logo {
+  padding: 3px;
+  margin-left: 10px;
+  float: right;
+  line-height: 1;
+  background: #002400;
+}
+
+// GPS locate markers (rendered into the MapLibre map)
+.navigator-locate-position,
+.navigator-locate-heading {
+  color: var(--bs-primary);
+  line-height: 0;
+  pointer-events: none;
+}
+
+// Modal z-index — must sit above the top nav bar
+.navigator-modal-backdrop {
+  z-index: 1065;
+}
+
+.navigator-modal {
+  z-index: 1070;
+}

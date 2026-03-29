@@ -1,5 +1,6 @@
+import "maplibre-gl/dist/maplibre-gl.css"; // MapLibre GL JS — required for the map
 import Navigator from "@ogis/navigator";
-import "@ogis/navigator/navigator.css";
+import "./theme.scss";
 
 const nav = Navigator.create({
   id: "app",

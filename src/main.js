@@ -2,9 +2,12 @@ import "maplibre-gl/dist/maplibre-gl.css"; // MapLibre GL JS — required for th
 import Navigator from "@ogis/navigator";
 import "./theme.scss";
 
+import { RecordingsPlugin } from "./recordings/recordings.js";
+
 const nav = Navigator.create({
   id: "app",
   debug: false, // Optional: Enable debug mode
+  plugins: [RecordingsPlugin],
   messages: {
     // English (default)
     en: {

@@ -1,6 +1,6 @@
 {
   "name": "onrte-app",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.5",
     "vite": "^8.0.1"
   },
   "dependencies": {
-    "@ogis/navigator": "^1.0.22",
+    "@ogis/navigator": "^1.0.24",
     "sass": "^1.98.0"
   }
 }

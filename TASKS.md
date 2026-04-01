@@ -1,0 +1,1 @@
+1/ Using the @ogis/navigator package documentation, implement the Recordings feature into the application https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/extend/5.features.md

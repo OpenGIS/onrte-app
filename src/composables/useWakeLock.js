@@ -25,33 +25,20 @@ export const useWakeLock = () => {
 
     const s = instances.get(instanceId);
     const supported = "wakeLock" in navigator;
-    if (!supported) debug.warn("Wake Lock API not supported in this browser");
-
-    const acquire = async () => {
-        if (!supported || s.sentinel) return;
-        debug.log("requesting screen wake lock");
-        try {
-            s.sentinel = await navigator.wakeLock.request("screen");
-            debug.log("wake lock acquired", s.sentinel);
-            s.sentinel.addEventListener("release", () => {
-                debug.log("wake lock released", { visibilityState: document.visibilityState });
-                s.sentinel = null;
-            });
-        } catch (err) {
-            debug.warn("wake lock request denied", err);
-        }
-    };
-
-    const onVisibilityChange = () => {
-        debug.log("visibilitychange", { visibilityState: document.visibilityState, activated: s.activated, hasSentinel: !!s.sentinel });
-        if (s.activated && document.visibilityState === "visible") {
-            acquire();
-        }
-    };
 
     const init = () => {
-        if (!supported) return;
-        debug.log("init — waiting for first interaction");
+        debug.log("init", {
+            supported,
+            isSecureContext: window.isSecureContext,
+            protocol: location.protocol,
+            visibilityState: document.visibilityState,
+            userAgent: navigator.userAgent,
+        });
+
+        if (!supported) {
+            debug.warn("Wake Lock API not supported in this browser");
+            return;
+        }
 
         document.addEventListener(
             "pointerdown",
@@ -64,6 +51,36 @@ export const useWakeLock = () => {
         );
 
         document.addEventListener("visibilitychange", onVisibilityChange);
+    };
+
+    const acquire = async () => {
+        if (!supported || s.sentinel) return;
+        debug.log("requesting screen wake lock", {
+            isSecureContext: window.isSecureContext,
+            visibilityState: document.visibilityState,
+            hasSentinel: !!s.sentinel,
+        });
+        try {
+            s.sentinel = await navigator.wakeLock.request("screen");
+            debug.log("wake lock acquired", { type: s.sentinel.type, released: s.sentinel.released });
+            s.sentinel.addEventListener("release", () => {
+                debug.log("wake lock released", { visibilityState: document.visibilityState });
+                s.sentinel = null;
+            });
+        } catch (err) {
+            debug.warn("wake lock request denied", { name: err.name, message: err.message });
+        }
+    };
+
+    const onVisibilityChange = () => {
+        debug.log("visibilitychange", {
+            visibilityState: document.visibilityState,
+            activated: s.activated,
+            hasSentinel: !!s.sentinel,
+        });
+        if (s.activated && document.visibilityState === "visible") {
+            acquire();
+        }
     };
 
     return { init };

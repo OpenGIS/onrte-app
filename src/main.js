@@ -1,13 +1,7 @@
-import maplibregl from "maplibre-gl";
-import "maplibre-gl/dist/maplibre-gl.css";
-import cspWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
+import "maplibre-gl/dist/maplibre-gl.css"; // MapLibre GL JS — required for the map
 import Navigator from "@ogis/navigator";
 import "./theme.scss";
 import { RecordingsPlugin } from "./recordings/recordings.js";
-
-// Use the pre-built CSP worker instead of the inline blob worker.
-// Vite's minification breaks the blob worker's shared-module references in production.
-maplibregl.setWorkerUrl(cspWorkerUrl);
 
 const nav = Navigator.create({
   id: "app",

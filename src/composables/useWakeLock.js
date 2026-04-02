@@ -26,39 +26,12 @@ export const useWakeLock = () => {
     const s = instances.get(instanceId);
     const supported = "wakeLock" in navigator;
 
-    const init = () => {
-        debug.log("init", {
-            supported,
-            isSecureContext: window.isSecureContext,
-            protocol: location.protocol,
-            visibilityState: document.visibilityState,
-            userAgent: navigator.userAgent,
-        });
-
-        if (!supported) {
-            debug.warn("Wake Lock API not supported in this browser");
-            return;
-        }
-
-        document.addEventListener(
-            "pointerdown",
-            () => {
-                debug.log("first interaction detected — acquiring wake lock");
-                s.activated = true;
-                acquire();
-            },
-            { once: true },
-        );
-
-        document.addEventListener("visibilitychange", onVisibilityChange);
-    };
-
     const acquire = async () => {
-        if (!supported || s.sentinel) return;
+        if (!supported) return;
+        if (s.sentinel && !s.sentinel.released) return;
         debug.log("requesting screen wake lock", {
             isSecureContext: window.isSecureContext,
             visibilityState: document.visibilityState,
-            hasSentinel: !!s.sentinel,
         });
         try {
             s.sentinel = await navigator.wakeLock.request("screen");
@@ -81,6 +54,30 @@ export const useWakeLock = () => {
         if (s.activated && document.visibilityState === "visible") {
             acquire();
         }
+    };
+
+    const init = () => {
+        debug.log("init", {
+            supported,
+            isSecureContext: window.isSecureContext,
+            protocol: location.protocol,
+            visibilityState: document.visibilityState,
+            userAgent: navigator.userAgent,
+        });
+
+        if (!supported) {
+            debug.warn("Wake Lock API not supported in this browser");
+            return;
+        }
+
+        // Re-request on every click so the lock is silently re-acquired after
+        // any browser-initiated release (power-saving, brief visibility loss, etc.)
+        window.addEventListener("click", () => {
+            s.activated = true;
+            acquire();
+        });
+
+        document.addEventListener("visibilitychange", onVisibilityChange);
     };
 
     return { init };

@@ -1,6 +1,6 @@
 {
   "name": "onrte-app",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "type": "module",
   "description": "On Route — Get where you are going.",
   "private": true,

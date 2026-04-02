@@ -1,5 +1,5 @@
 <script setup>
-import { ref, inject } from "vue";
+import { ref, inject, onMounted } from "vue";
 import iconSprite from "@ogis/icons/dist/ogis-icons.svg?raw";
 
 // UI
@@ -10,6 +10,7 @@ import LocateConfirm from "@/components/modals/locate-confirm.vue";
 import { useMap } from "@/composables/useMap";
 import { useUI } from "@/composables/useUI";
 import { useSettings } from "@/composables/useSettings";
+import { useWakeLock } from "@/composables/useWakeLock";
 
 const instanceId = inject("onrteAppId", "app");
 
@@ -45,10 +46,15 @@ const handleMapClick = () => {
 if (isDesktop.value) {
 	openPanel();
 }
+
+const rootEl = ref(null);
+const { init: initWakeLock } = useWakeLock();
+onMounted(() => initWakeLock(rootEl.value));
 </script>
 
 <template>
 	<div
+		ref="rootEl"
 		class="onrte-root position-fixed top-0 start-0 w-100 h-100 overflow-hidden"
 		:data-bs-theme="resolvedTheme"
 	>

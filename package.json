@@ -1,6 +1,6 @@
 {
   "name": "onrte-app",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,7 +18,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
-    "@ogis/navigator": "^1.0.26",
+    "@ogis/navigator": "^1.0.27",
     "sass": "^1.98.0"
   }
 }

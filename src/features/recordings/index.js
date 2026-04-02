@@ -230,14 +230,29 @@ export const RecordingsFeature = {
       persist();
     };
 
-    const downloadGPX = (recording) => {
-      const blob = new Blob([toGPX(recording)], {
-        type: 'application/gpx+xml',
-      });
+    const downloadGPX = async (recording) => {
+      const filename = `recording-${recording.id}.gpx`;
+      const blob = new Blob([toGPX(recording)], { type: 'application/gpx+xml' });
+
+      // Web Share API: best on mobile — triggers the native share sheet (iOS Save to Files, Android, etc.)
+      if (navigator.share) {
+        const file = new File([blob], filename, { type: 'application/gpx+xml' });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file] });
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') return; // user cancelled share sheet
+            // share failed for another reason — fall through to anchor download
+          }
+        }
+      }
+
+      // Fallback: anchor download (desktop browsers)
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `recording-${recording.id}.gpx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

@@ -258,7 +258,7 @@ $font-size-base: 0.9375rem; // 15 px
 
 // Side panel — positioned below the top bar
 .onrte-panel {
-  top: 86px !important;
+  top: 78px !important;
   height: calc(100% - 73px) !important;
 }
 
@@ -289,6 +289,12 @@ $font-size-base: 0.9375rem; // 15 px
     outline-offset: 2px;
     border-radius: 4px;
   }
+}
+
+.icon-btn__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon-btn__label {

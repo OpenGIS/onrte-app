@@ -32,8 +32,6 @@ const label = computed(() => {
   <IconButton
     :icon="iconName"
     :label="label"
-    :icon-width="48"
-    :icon-height="48"
     :icon-color="iconColor"
     :active="mode !== null && mode !== 'error'"
     :class="{ 'locate-btn--error': mode === 'error' }"

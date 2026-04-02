@@ -2,6 +2,7 @@
 <script setup>
 import { inject, computed } from 'vue';
 import { useUI } from '@/composables/useUI.js';
+import IconButton from '@/components/ui/icon-button.vue';
 
 const { state, start, pause, resume } = inject('recordings');
 const { setActivePanel, openPanel } = useUI();
@@ -20,11 +21,13 @@ const toggle = () => {
   }
 };
 
-const color = computed(() => {
-  if (state.isRecording) return 'var(--bs-danger)';
-  if (state.isPaused) return 'var(--bs-secondary)';
-  return 'currentColor';
-});
+const isActive = computed(() => state.isRecording || state.isPaused);
+
+const iconName = computed(() => isActive.value ? 'pause-circle' : 'circle');
+
+const iconColor = computed(() =>
+  isActive.value ? 'var(--bs-primary)' : 'currentColor'
+);
 
 const label = computed(() => {
   if (state.isRecording) return 'Recording';
@@ -34,15 +37,14 @@ const label = computed(() => {
 </script>
 
 <template>
-  <button
-    type="button"
+  <IconButton
     id="recordings-button"
-    class="border-0 bg-transparent text-white d-flex flex-column align-items-center"
+    :icon="iconName"
+    :label="label"
+    :icon-width="40"
+    :icon-height="40"
+    :icon-color="iconColor"
+    :active="isActive"
     @click="toggle"
-  >
-    <svg width="40" height="40" :fill="color">
-      <use href="#record-btn-fill" />
-    </svg>
-    <small :style="{ color }">{{ label }}</small>
-  </button>
+  />
 </template>

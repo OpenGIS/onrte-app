@@ -6,4 +6,4 @@
 
 3/ Modals @src/modals/\*.md do not respect the dark theme and display with a white background and black text. Update the modal styles to be compatible with both light and dark themes.
 
-4/ Currently the @src/components/modals/locate-confirm.vue is only presented to the user when they click the locate button. The logic behind this modal is that the user has not yet completed a successful geolocation - which both the record and locate feature use. The code should be refactored so either event triggers this confirmation modal before actual geolocation attempt is made.
+4/ The GPX export function works on Desktop but does not work on mobile. When the export button is clicked on mobile, the loading indicator is displayed but the page hangs.

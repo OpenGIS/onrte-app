@@ -19,12 +19,14 @@ defineProps({
     :id="id"
     :aria-pressed="active"
   >
-    <Icon
-      :width="iconWidth"
-      :height="iconHeight"
-      :fill="iconColor"
-      :name="icon"
-    />
+    <div class="icon-btn__icon" :style="{ height: iconHeight + 'px' }">
+      <Icon
+        :width="iconWidth"
+        :height="iconHeight"
+        :fill="iconColor"
+        :name="icon"
+      />
+    </div>
     <span class="icon-btn__label" :style="{ color: iconColor }">{{
       label
     }}</span>

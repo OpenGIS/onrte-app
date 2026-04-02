@@ -1,5 +1,7 @@
 import { inject } from "vue";
+import { createDebug } from "@/debug.js";
 
+const debug = createDebug("wake-lock");
 const instances = new Map();
 
 /**
@@ -23,31 +25,38 @@ export const useWakeLock = () => {
 
     const s = instances.get(instanceId);
     const supported = "wakeLock" in navigator;
+    if (!supported) debug.warn("Wake Lock API not supported in this browser");
 
     const acquire = async () => {
         if (!supported || s.sentinel) return;
+        debug.log("requesting screen wake lock");
         try {
             s.sentinel = await navigator.wakeLock.request("screen");
+            debug.log("wake lock acquired", s.sentinel);
             s.sentinel.addEventListener("release", () => {
+                debug.log("wake lock released", { visibilityState: document.visibilityState });
                 s.sentinel = null;
             });
-        } catch {
-            // Browser denied the request (e.g. low battery, permission policy)
+        } catch (err) {
+            debug.warn("wake lock request denied", err);
         }
     };
 
     const onVisibilityChange = () => {
+        debug.log("visibilitychange", { visibilityState: document.visibilityState, activated: s.activated, hasSentinel: !!s.sentinel });
         if (s.activated && document.visibilityState === "visible") {
             acquire();
         }
     };
 
-    const init = (el) => {
+    const init = () => {
         if (!supported) return;
+        debug.log("init — waiting for first interaction");
 
-        el.addEventListener(
+        document.addEventListener(
             "pointerdown",
             () => {
+                debug.log("first interaction detected — acquiring wake lock");
                 s.activated = true;
                 acquire();
             },

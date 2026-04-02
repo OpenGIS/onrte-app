@@ -49,7 +49,7 @@ if (isDesktop.value) {
 
 const rootEl = ref(null);
 const { init: initWakeLock } = useWakeLock();
-onMounted(() => initWakeLock(rootEl.value));
+onMounted(() => initWakeLock());
 </script>
 
 <template>

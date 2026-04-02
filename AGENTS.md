@@ -1,21 +1,184 @@
-# AGENTS.md
+# AGENTS.md — On Route App
 
-This app is tightly coupled to the `@ogis/navigator` package. Before making changes, review the OpenGIS Navigator developer documentation.
+Context for agentic coding tools. Read this before making any changes to the codebase.
 
-## Developer Documentation
+---
 
-Start here for an overview:
+## Git Policy
 
-- [Developer Guide (README)](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/README.md)
+**Do not** stage (`git add`) or commit (`git commit`) changes. The developer manages all git operations manually. Git may be used in read-only mode for context (e.g. `git diff`, `git log`, `git status`).
 
-### Numbered Dev Docs
+---
 
-1. [Configuration](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/1.config.md)
-2. [Instances](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/2.instances.md)
-3. [Map](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/3.map.md)
-4. [UI](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/4.ui.md)
-5. [Locale](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/5.locale.md)
-6. [Theme](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/6.theme.md)
-7. [Features](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/7.features.md)
-8. [Extending](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/8.extending.md)
-9. [Testing](https://raw.githubusercontent.com/OpenGIS/navigator/refs/heads/master/docs/dev/9.testing.md)
+## What is this project?
+
+On Route App is a standalone mapping PWA. It wraps [MapLibre GL JS](https://maplibre.org/) and [Vue 3](https://vuejs.org/) into a full-screen map app with GPS locate, route recording, and a green-themed UI. The app entry point is `src/main.js` and it is built as a standard Vite app (not a library).
+
+The app is a fully installable PWA. It includes a Web App Manifest (`public/manifest.json`), PWA icons (`public/icon-*.png`), and viewport meta tags that disable page-level zoom so MapLibre handles all zooming.
+
+---
+
+## Commands
+
+```bash
+npm run dev          # start Vite dev server (app at http://localhost:5173)
+npm run build        # build the app for distribution
+npm run test:unit    # run vitest unit tests (<1 s)
+npm run test:e2e -- tests/e2e/{spec}.spec.js   # run only the relevant E2E spec
+npm run test:e2e     # run all E2E tests
+npm test             # run unit tests only (final check before confirming a task done)
+```
+
+### Running tests — timing guidance
+
+`npm test` runs unit tests only and completes in under a second.
+
+E2E tests are available separately via `npm run test:e2e` but are slow (a single spec takes **15–45 seconds**, the full suite **2–3 minutes**) and are not required as part of the standard task completion check. Run E2E tests manually when validating browser integration or complex user flows.
+
+When running E2E tests with a shell tool, use `mode="sync"` with `initial_wait` set to at least **60** for a single spec and **240** for the full suite. You will be automatically notified when the command completes — **do not poll repeatedly with short waits**. Wait for the completion notification, then read the output once.
+
+---
+
+## Source Structure
+
+```
+src/
+  main.js               # app entry point — reads URL params, creates Vue app, installs features, mounts
+  emitter.js            # module-level EventEmitter singleton
+  App.vue               # root Vue component
+  composables/
+    useStorage.js       # localStorage wrapper, instance-scoped
+    useUrlHash.js       # URL hash read/write helpers
+    useMap.js           # MapLibre lifecycle, globe projection, view persistence
+    useUI.js            # UI state: breakpoints, panel, nav, first-load
+    useLocale.js        # i18n: language resolution, translations
+    useSettings.js      # user preferences: theme, units, language
+    useLocate.js        # GPS locate feature
+    useGeoJSON.js       # GeoJSON rendering: points, lines, polygons
+  features/
+    recordings/
+      index.js          # Recordings feature — GPS track recording, GPX export
+      RecordButton.vue  # toolbar button
+      RecordingsPanel.vue # side panel
+  components/
+    panels/
+      about.vue         # About panel
+      privacy.vue       # Privacy panel
+      locate.vue        # Locate panel
+      settings.vue      # Settings panel
+    ui/
+      top.vue           # top navigation bar
+      top/
+        locate.vue      # Locate button (top bar)
+      about.vue         # About modal (first-load + menu button)
+      side/
+        panel.vue       # Bootstrap offcanvas side panel
+        menu.vue        # default panel content (main navigation)
+```
+
+---
+
+## Key Conventions
+
+### Instance isolation
+
+The `instanceId` is read from the `?id=` URL param (default `'app'`) and passed via `app.provide('onrteAppId', instanceId)`. All composables call `inject('onrteAppId', 'app')` to scope their localStorage keys. This supports iframe isolation — each iframe gets its own `?id=` and its own storage namespace.
+
+### localStorage key format
+
+```
+onrte_{namespace}_{instanceId}
+```
+
+Examples: `onrte_view_app`, `onrte_settings_app`. The instance id is always last — this makes keys easy to read in browser DevTools.
+
+### Composable pattern
+
+Logic lives in composables, not components. Per-instance state is cached in a module-level `Map` keyed by `instanceId`. Example pattern:
+
+```js
+const cache = new Map();
+
+export const useMyFeature = () => {
+  const instanceId = inject("onrteAppId", "app");
+
+  if (!cache.has(instanceId)) {
+    cache.set(instanceId, {
+      state: useStorage("my-feature", { /* defaults */ }),
+    });
+  }
+
+  return cache.get(instanceId);
+};
+```
+
+### CSS selectors
+
+Core elements use `.onrte-*` classes:
+
+- `.onrte-map` — MapLibre container
+- `.onrte-top` — top navigation bar
+- `.onrte-panel` — Bootstrap offcanvas side panel
+- `--onrte-panel-width` — CSS custom property for panel width
+
+### GeoJSON property keys
+
+GeoJSON features use `onrte.*` properties for styles: `onrte.color`, `onrte.width`, `onrte.opacity`, `onrte.radius`, `onrte.fillOpacity`. These are used in MapLibre layer expressions and in feature data.
+
+### Default Coordinates
+
+Use the following coordinates in all examples and documentation:
+
+```
+lat: 50.6539, lng: -128.0094   // Scarlet Ibis Pub, Holberg, British Columbia, Canada
+```
+
+In MapLibre `center` arrays (which are `[lng, lat]`):
+
+```js
+center: [-128.0094, 50.6539];
+```
+
+### Features
+
+Features are plain objects with an `install(ctx)` method. A feature lives in `src/features/{name}/` and is registered in `src/main.js`. See `docs/9.features.md` for the full pattern.
+
+---
+
+## Docs
+
+| Doc | Purpose |
+|-----|---------|
+| `docs/1.setup.md` | Dev server, build, URL params, iframe isolation |
+| `docs/2.instances.md` | Instance ID, localStorage key format |
+| `docs/3.map.md` | `useMap` API: lifecycle, view persistence, URL hash, globe |
+| `docs/4.ui.md` | `useUI` API: breakpoints, panel, navigation |
+| `docs/5.geojson.md` | `useGeoJSON` API: rendering features with styles |
+| `docs/6.locale.md` | `useLocale` API: translations, language resolution |
+| `docs/7.theme.md` | Bootstrap SCSS theme, green palette |
+| `docs/8.testing.md` | Unit and E2E testing conventions |
+| `docs/9.features.md` | Adding a core feature (internal plugin pattern) |
+
+---
+
+## Adding a New Feature
+
+1. Create `src/features/{name}/index.js` with `install(ctx)` method
+2. Create `src/features/{name}/{Name}Button.vue` and `{Name}Panel.vue` as needed
+3. Register in `src/main.js`: `MyFeature.install(featureCtx)`
+4. Create `tests/e2e/features/{name}.spec.js`
+5. Run `npm run test:e2e -- tests/e2e/features/{name}.spec.js` during development; `npm test` as final check
+
+---
+
+## MCP
+
+A Playwright MCP server is configured in `.github/mcp.json`. Agents with MCP support can use it to navigate the app and inspect the DOM directly.
+
+---
+
+## Further Reading
+
+- `README.md` — app overview, development commands
+- `docs/README.md` — docs index
+- `docs/9.features.md` — how to build a feature

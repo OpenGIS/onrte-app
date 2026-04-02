@@ -1,6 +1,7 @@
-// recordings.js — Recordings plugin for Navigator
+// recordings/index.js — Recordings core feature for On Route App
 import { reactive, ref, computed } from 'vue';
-import { useGeoJSON } from '@ogis/navigator';
+import { useGeoJSON } from '@/composables/useGeoJSON.js';
+import { useLocate } from '@/composables/useLocate.js';
 import RecordButton from './RecordButton.vue';
 import RecordingsPanel from './RecordingsPanel.vue';
 
@@ -66,7 +67,7 @@ function toGPX(recording) {
     .join('\n');
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<gpx version="1.1" creator="Navigator">',
+    '<gpx version="1.1" creator="On Route">',
     '  <trk>',
     `    <name>Recording ${new Date(recording.timestamp).toLocaleString()}</name>`,
     '    <trkseg>',
@@ -81,24 +82,20 @@ function toGPX(recording) {
 // Map layer constants
 // ---------------------------------------------------------------------------
 
-const COLOR_ACTIVE = '#4a8dc8'; // $primary — Navigator brand blue
-const COLOR_PAUSED = '#6c757d'; // $secondary — Bootstrap grey
+const COLOR_ACTIVE = '#39d353'; // app green
+const COLOR_PAUSED = '#6c757d'; // Bootstrap secondary grey
 const TRACK_ID = 'recordings-active-track';
 
 // ---------------------------------------------------------------------------
-// Plugin
+// Feature
 // ---------------------------------------------------------------------------
 
-export const RecordingsPlugin = {
+export const RecordingsFeature = {
   install({ useStorage, useSettings, getMap, instanceId, provide, addButton }) {
-    // useStorage is pre-scoped — no instanceId needed.
-    // Stored as "navigator_recordings_{instanceId}" in localStorage.
     const stored = useStorage('recordings', { saved: [], active: null });
-
-    // useSettings is pre-scoped — access user preferences directly.
     const { isMetric } = useSettings();
+    const { requestPermission } = useLocate(instanceId);
 
-    // Reactive state shared with Vue components via provide()
     const state = reactive({
       isRecording: false,
       isPaused: false,
@@ -113,8 +110,6 @@ export const RecordingsPlugin = {
     let watchId = null;
     let timerId = null;
 
-    // --- GeoJSON layer (via useGeoJSON API) ---------------------------------
-
     const geoJSON = useGeoJSON(instanceId);
 
     const updateLine = () => {
@@ -128,14 +123,12 @@ export const RecordingsPlugin = {
         id: TRACK_ID,
         geometry: { type: 'LineString', coordinates: coords },
         properties: {
-          'navigator.color': state.isPaused ? COLOR_PAUSED : COLOR_ACTIVE,
-          'navigator.width': 3,
-          'navigator.opacity': 0.85,
+          'onrte.color': state.isPaused ? COLOR_PAUSED : COLOR_ACTIVE,
+          'onrte.width': 3,
+          'onrte.opacity': 0.85,
         },
       });
     };
-
-    // --- Persistence --------------------------------------------------------
 
     const persist = () => {
       const active =
@@ -145,8 +138,6 @@ export const RecordingsPlugin = {
       stored.saved = state.saved;
       stored.active = active;
     };
-
-    // --- Geolocation --------------------------------------------------------
 
     const startGeo = () => {
       if (watchId !== null) return;
@@ -173,8 +164,6 @@ export const RecordingsPlugin = {
       }
     };
 
-    // --- Timer --------------------------------------------------------------
-
     const startTimer = () => {
       elapsed.value = Date.now() - state.startTime;
       timerId = setInterval(() => {
@@ -189,9 +178,7 @@ export const RecordingsPlugin = {
       }
     };
 
-    // --- Actions ------------------------------------------------------------
-
-    const start = () => {
+    const doStart = () => {
       state.isRecording = true;
       state.isPaused = false;
       if (!state.startTime) state.startTime = Date.now();
@@ -200,6 +187,8 @@ export const RecordingsPlugin = {
       persist();
       updateLine();
     };
+
+    const start = () => requestPermission(doStart);
 
     const pause = () => {
       state.isRecording = false;
@@ -260,9 +249,9 @@ export const RecordingsPlugin = {
         id: TRACK_ID,
         geometry: { type: 'LineString', coordinates: coords },
         properties: {
-          'navigator.color': COLOR_ACTIVE,
-          'navigator.width': 3,
-          'navigator.opacity': 0.85,
+          'onrte.color': COLOR_ACTIVE,
+          'onrte.width': 3,
+          'onrte.opacity': 0.85,
         },
       });
       const map = getMap();
@@ -279,15 +268,11 @@ export const RecordingsPlugin = {
       }
     };
 
-    // --- Crash recovery -------------------------------------------------------
-    // useGeoJSON queues features set before map:ready and applies them on load.
-
+    // Crash recovery: restore paused line if the app was closed mid-recording.
     if (stored.active?.points?.length >= 2) {
       state.isPaused = true;
       updateLine();
     }
-
-    // --- Provide to Vue tree ------------------------------------------------
 
     provide('recordings', {
       state,
@@ -304,8 +289,6 @@ export const RecordingsPlugin = {
       showOnMap,
     });
 
-    // --- Register UI --------------------------------------------------------
-
     addButton({
       id: 'record',
       icon: 'route',
@@ -317,8 +300,6 @@ export const RecordingsPlugin = {
       },
     });
 
-    // Return cleanup function for plugin teardown.
-    // Map sources/layers are auto-removed by useGeoJSON on destroy.
     return () => {
       stopGeo();
       stopTimer();

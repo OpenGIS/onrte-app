@@ -1,45 +1,104 @@
-import "maplibre-gl/dist/maplibre-gl.css"; // MapLibre GL JS — required for the map
-import Navigator from "@ogis/navigator";
-import "./theme.scss";
-import { RecordingsPlugin } from "./recordings/recordings.js";
+import { createApp, shallowRef } from "vue";
+import App from "./App.vue";
+import "./assets/sass/theme.scss";
+import "bootstrap";
 
-const nav = Navigator.create({
-  id: "app",
-  plugins: [RecordingsPlugin],
-  debug: false, // Optional: Enable debug mode
-  messages: {
-    // English (default)
-    en: {
-      "modal.welcome.title": "On Route",
-      "modal.welcome.introOne":
-        "An outdoor map for everyone, right in the browser.",
-      "modal.welcome.introTwo":
-        "No app stores, no accounts, no tracking. Powered by Open-Source.",
-      "panel.about.title": "About On Route",
-      "panel.about.descriptionOne":
-        "An outdoor map for everyone, right in the browser.",
-      "panel.about.descriptionTwo":
-        "On Route is a tool for not getting lost! Built with Open-Source software and Open data.",
-      "panel.privacy.noTrackingBody":
-        "This app contains no analytics, no advertising, and no tracking scripts of any kind.",
-    },
-    // French
-    fr: {
-      "modal.welcome.title": "En Route",
-      "modal.welcome.introOne":
-        "Une carte de plein air pour tous, directement dans le navigateur.",
-      "modal.welcome.introTwo":
-        "Pas de boutiques d'applications, pas de comptes, pas de suivi. Propulsé par l'Open-Source.",
-      "panel.about.title": "À propos de On Route",
-      "panel.about.descriptionOne":
-        "Une carte de plein air pour tous, directement dans le navigateur.",
-      "panel.about.descriptionTwo":
-        "On Route est un outil pour ne pas se perdre ! Construit avec des logiciels Open-Source et des données ouvertes.",
-      "panel.privacy.noTrackingBody":
-        "Cette application ne contient aucune analyse, aucune publicité et aucun script de suivi.",
-    },
-  },
-  onMapReady: ({ map }) => console.log("Map loaded"),
+import { emitter } from "./emitter.js";
+import { initLocaleCache } from "./composables/useLocale.js";
+import { getMapInstance } from "./composables/useMap.js";
+import { useStorage as _useStorage } from "./composables/useStorage.js";
+import { useSettings as _useSettings } from "./composables/useSettings.js";
+import { useLocale as _useLocale } from "./composables/useLocale.js";
+
+import { RecordingsFeature } from "./features/recordings/index.js";
+
+// --- Instance config ---
+// The instance ID scopes localStorage keys, enabling iframe isolation.
+// Override via ?id= URL param (e.g. an embedded iframe with id="trip-planner").
+const params = new URLSearchParams(window.location.search);
+const instanceId = (params.get("id") || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) || "app";
+const locale = params.get("locale") || null;
+
+// --- App setup ---
+initLocaleCache(instanceId, locale, {});
+
+const app = createApp(App);
+
+app.provide("onrteAppId", instanceId);
+app.provide("navigatorLocale", locale);
+app.provide("navigatorMessages", {});
+
+// Reactive button and panel registries — features register into these.
+const buttonsRef = shallowRef([]);
+const panelsRef = shallowRef([]);
+app.provide("navigatorButtons", buttonsRef);
+app.provide("navigatorPanels", panelsRef);
+
+// Reactive map ref — null until MapLibre emits map:ready.
+const mapRef = shallowRef(null);
+emitter.once("map:ready", ({ map }) => {
+    mapRef.value = map;
 });
 
-nav.mount();
+// Auto-cleanup tracking for feature-added map sources/layers.
+const trackedSources = [];
+const trackedLayers = [];
+
+emitter.on("destroy", () => {
+    mapRef.value = null;
+    const map = getMapInstance(instanceId);
+    if (map) {
+        for (const layerId of [...trackedLayers].reverse()) {
+            if (map.getLayer(layerId)) map.removeLayer(layerId);
+        }
+        for (const sourceId of [...trackedSources].reverse()) {
+            if (map.getSource(sourceId)) map.removeSource(sourceId);
+        }
+    }
+});
+
+// --- Internal feature context ---
+// Passed to each feature's install() method. Provides scoped access to
+// app services without exposing the raw Vue app or emitter.
+const featureCtx = {
+    app,
+    instanceId,
+    map: mapRef,
+    emitter,
+    useStorage: (namespace, defaultState) => _useStorage(namespace, defaultState, instanceId),
+    useSettings: () => _useSettings(instanceId),
+    useLocale: () => _useLocale(instanceId),
+    getMap: () => getMapInstance(instanceId),
+    onMapReady: (callback) => {
+        emitter.once("map:ready", ({ map }) => {
+            callback({
+                map,
+                addSource: (sourceId, options) => {
+                    map.addSource(sourceId, options);
+                    trackedSources.push(sourceId);
+                },
+                addLayer: (layerConfig, before) => {
+                    map.addLayer(layerConfig, before);
+                    trackedLayers.push(layerConfig.id);
+                },
+            });
+        });
+    },
+    on: (e, f) => emitter.on(e, f),
+    once: (e, f) => emitter.once(e, f),
+    off: (e, f) => emitter.off(e, f),
+    emit: (e, ...a) => emitter.emit(e, ...a),
+    provide: (key, value) => app.provide(key, value),
+    addButton: (config) => {
+        buttonsRef.value = [...buttonsRef.value, config];
+    },
+    addPanel: (config) => {
+        panelsRef.value = [...panelsRef.value, config];
+    },
+};
+
+// --- Install core features ---
+RecordingsFeature.install(featureCtx);
+
+// --- Mount ---
+app.mount("#app");

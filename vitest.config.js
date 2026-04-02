@@ -1,26 +1,16 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
   plugins: [vue()],
-
-  css: {
-    preprocessorOptions: {
-      scss: {
-        quietDeps: true,
-        silenceDeprecations: ["import", "legacy-js-api"],
-      },
-    },
-  },
-
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
-
-  server: {
-    open: "/index.html",
+  test: {
+    environment: "happy-dom",
+    include: ["tests/unit/**/*.test.js"],
   },
 });

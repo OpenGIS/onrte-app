@@ -1,0 +1,165 @@
+import { ref, computed, inject } from "vue";
+import { emitter } from "@/emitter.js";
+
+// Module-level state — one UI state per app context.
+const instances = new Map();
+const resizeCleanups = new Map();
+
+function createState(instanceId) {
+    // isFirstLoad is true when the map view has never been persisted for this instance.
+    const storageKey = `onrte_view_${instanceId}`;
+    const firstLoad = !localStorage.getItem(storageKey);
+    return {
+        width: ref(window.innerWidth),
+        isFirstLoad: ref(firstLoad),
+        showAboutModal: ref(firstLoad),
+        isNavVisible: ref(window.innerWidth >= 992),
+        isNavExpanded: ref(false),
+        isPanelVisible: ref(false),
+        isPanelExpanded: ref(false),
+        activePanel: ref("view"),
+    };
+}
+
+/**
+ * Composable for UI state management.
+ *
+ * Manages responsive breakpoints, side panel visibility, navigation bar state,
+ * and first-load detection. State is shared across all callers within the app.
+ */
+export const useUI = () => {
+    const instanceId = inject("onrteAppId", "app");
+
+    if (!instances.has(instanceId)) {
+        instances.set(instanceId, createState(instanceId));
+
+        const s = instances.get(instanceId);
+        const onResize = () => {
+            s.width.value = window.innerWidth;
+            if (s.width.value >= 992) {
+                s.isNavVisible.value = true;
+            } else if (s.isNavVisible.value && !s.isNavExpanded.value) {
+                s.isNavVisible.value = false;
+            }
+        };
+
+        window.addEventListener("resize", onResize);
+        resizeCleanups.set(instanceId, () =>
+            window.removeEventListener("resize", onResize),
+        );
+    }
+
+    const s = instances.get(instanceId);
+
+    // --- Computed ---
+
+    const isDesktop = computed(() => s.width.value >= 992);
+    const isTablet = computed(() => s.width.value >= 768 && s.width.value < 992);
+    const isMobile = computed(() => s.width.value < 768);
+
+    // --- Actions ---
+
+    const toggleNav = () => {
+        s.isNavVisible.value = !s.isNavVisible.value;
+        if (s.isNavVisible.value && !isDesktop.value) {
+            s.isNavExpanded.value = true;
+        } else {
+            s.isNavExpanded.value = false;
+        }
+    };
+
+    const closeNav = () => {
+        s.isNavVisible.value = false;
+        if (!isDesktop.value) {
+            s.isNavExpanded.value = false;
+        }
+    };
+
+    const setNavExpanded = (value) => {
+        s.isNavExpanded.value = value;
+    };
+
+    const openPanel = () => {
+        s.isPanelVisible.value = true;
+        s.isPanelExpanded.value = true;
+        if (s.isNavVisible.value && !isDesktop.value) {
+            s.isNavVisible.value = false;
+        }
+        s.isNavExpanded.value = false;
+    };
+
+    const togglePanel = () => {
+        if (s.isNavVisible.value && !isDesktop.value) {
+            openPanel();
+            return;
+        }
+        if (s.isPanelVisible.value) {
+            s.isPanelVisible.value = false;
+        } else {
+            openPanel();
+        }
+    };
+
+    const closePanel = () => {
+        s.isPanelVisible.value = false;
+    };
+
+    const togglePanelExpanded = () => {
+        s.isPanelExpanded.value = !s.isPanelExpanded.value;
+    };
+
+    const setPanelExpanded = (value) => {
+        s.isPanelExpanded.value = value;
+    };
+
+    const setActivePanel = (id) => {
+        s.activePanel.value = id;
+        emitter.emit("panel:change", id);
+    };
+
+    const setFirstLoadComplete = () => {
+        s.isFirstLoad.value = false;
+    };
+
+    const openAboutModal = () => {
+        s.showAboutModal.value = true;
+    };
+
+    const closeAboutModal = () => {
+        s.showAboutModal.value = false;
+        if (s.isFirstLoad.value) {
+            setFirstLoadComplete();
+        }
+    };
+
+    return {
+        // State
+        width: s.width,
+        isNavVisible: s.isNavVisible,
+        isNavExpanded: s.isNavExpanded,
+        isPanelVisible: s.isPanelVisible,
+        isPanelExpanded: s.isPanelExpanded,
+        activePanel: s.activePanel,
+        isFirstLoad: s.isFirstLoad,
+        showAboutModal: s.showAboutModal,
+
+        // Computed
+        isDesktop,
+        isTablet,
+        isMobile,
+
+        // Actions
+        toggleNav,
+        closeNav,
+        setNavExpanded,
+        openPanel,
+        togglePanel,
+        closePanel,
+        togglePanelExpanded,
+        setPanelExpanded,
+        setActivePanel,
+        setFirstLoadComplete,
+        openAboutModal,
+        closeAboutModal,
+    };
+};

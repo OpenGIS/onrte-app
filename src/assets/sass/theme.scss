@@ -1,72 +1,67 @@
 // ============================================================
-// Navigator — Green theme example
-// docs/theme/green.scss
+// On Route App Theme  ·  src/assets/sass/theme.scss
 //
-// A dark-navbar, green-accent theme inspired by GPS/trail apps.
-// Copy this file into your project, adjust the palette in §2,
-// and import it instead of @ogis/navigator/navigator.css.
-//
-// ⚠ MapLibre GL JS CSS is NOT included here. Import it
-//   separately in your application entry point BEFORE this file:
-//     import "maplibre-gl/dist/maplibre-gl.css"
-//
-// Palette
-// ─────────────────────────────────────────────────────────
-//   $nav-green   #39d353  — GPS marker green (primary accent)
-//   $nav-black   #111111  — near-black top bar
-//   $nav-white   #ffffff  — light-mode panel base
-//   $nav-ink     #1a1f1a  — body text in light mode
+// A GPS-trail-inspired Bootstrap 5.3 theme with a green accent
+// and dark navbar, making the UI feel native to the map beneath it.
 //
 // Structure
 // ─────────────────────────────────────────────────────────
-// §1  Bootstrap functions    (required first)
-// §2  Theme palette          (edit these to retheme)
-// §3  Bootstrap overrides
-// §4  Bootstrap infrastructure
-// §5  Full Bootstrap component set
-// §6  Navigator component overrides
+// #1  Bootstrap functions    (required first)
+// #2  App palette            (edit these to retheme)
+// #3  Bootstrap overrides    (variables that change defaults)
+// #4  Bootstrap infrastructure (variables, maps, mixins, root)
+// #5  Full Bootstrap component set
+// #6  App component overrides
 //       a  Top navigation bar
 //       b  Side panel (Offcanvas)
 //       c  Panel navigation tabs
 //       d  Panel content sections
 //       e  Icon buttons
 //       f  Share URL textarea
-//       g  Navigator layout and component styles (required)
+//       g  Layout and structural styles
 // ============================================================
 
-// ── §1  Bootstrap functions ───────────────────────────────────
+// ── #1  Bootstrap functions ───────────────────────────────────
+// Must come before any variable declarations so that Bootstrap's
+// colour-manipulation helpers (tint-color, shade-color, etc.)
+// are available when we define our palette below.
 
 @import "bootstrap/scss/functions";
 
-// ── §2  Theme palette ─────────────────────────────────────────
-// Edit these four variables to shift the entire theme.
+// ── #2  App palette ───────────────────────────────────────────
+// Four base hues. Adjust these alone to shift the entire theme
+// without touching individual components.
 
-$nav-green: #39d353; // GPS marker green  — primary accent (links, active states, focus rings)
-$nav-black: #111111; // near-black        — always-dark top bar background
-$nav-white: #ffffff; // clean white       — light-mode panel base colour
-$nav-ink: #1a1f1a; // near-black green  — body text in light mode
+$app-green: #39d353; // GPS marker green  — primary accent
+$app-black: #111111; // near-black        — always-dark top bar
+$app-white: #ffffff; // clean white       — light-mode panel base
+$app-ink: #1a1f1a; // near-black green  — body text in light mode
 
-// ── §3  Bootstrap variable overrides ─────────────────────────
+// ── #3  Bootstrap variable overrides ─────────────────────────
+// Only the defaults we intentionally change. Unmentioned
+// variables keep their Bootstrap values.
 
 // Brand
-$primary: $nav-green;
+$primary: $app-green;
 
 // Body (light mode)
-$body-bg: $nav-white;
-$body-color: $nav-ink;
+$body-bg: $app-white;
+$body-color: $app-ink;
 
-// Borders
+// Borders — featherlight so they don't crowd the map
 $border-color: rgba(0, 0, 0, 0.09);
 $border-color-translucent: rgba(0, 0, 0, 0.09);
 
-// Panel geometry
+// Panel geometry — slightly narrower than Bootstrap's 400 px default
 $offcanvas-horizontal-width: 340px;
 $offcanvas-transition-duration: 0.25s;
 
-// Typography
+// Typography — one notch tighter than the 16 px browser default,
+// giving the UI a compact, map-annotation feel
 $font-size-base: 0.9375rem; // 15 px
 
-// ── §4  Required Bootstrap infrastructure ─────────────────────
+// ── #4  Required Bootstrap infrastructure ─────────────────────
+// Must follow #3 so these files resolve against our overrides.
 
 @import "bootstrap/scss/variables";
 @import "bootstrap/scss/variables-dark";
@@ -74,7 +69,9 @@ $font-size-base: 0.9375rem; // 15 px
 @import "bootstrap/scss/mixins";
 @import "bootstrap/scss/root";
 
-// ── §5  Full Bootstrap component set ──────────────────────────
+// ── #5  Full Bootstrap component set ──────────────────────────
+// Imported individually (instead of the monolithic bootstrap.scss)
+// so that #4 variables are already resolved before each partial.
 
 @import "bootstrap/scss/reboot";
 @import "bootstrap/scss/type";
@@ -110,28 +107,30 @@ $font-size-base: 0.9375rem; // 15 px
 @import "bootstrap/scss/utilities";
 @import "bootstrap/scss/utilities/api";
 
-// ── §6  Navigator component overrides ─────────────────────────
+// #6  App component overrides ──────────────────────────────
+// Root-level custom property so that App.vue can read the
+// panel width without needing to access the offcanvas element.
 
 :root {
-  --navigator-panel-width: #{$offcanvas-horizontal-width};
+  --onrte-panel-width: #{$offcanvas-horizontal-width};
 }
 
-// §6a  Top navigation bar
-// Always rendered with data-bs-theme="dark". Near-black fill
-// keeps it as a strong, unambiguous anchor for the UI.
+// #6a  Top navigation bar
+// ─────────────────────────────────────────────────────────────
+// The navbar always uses data-bs-theme="dark" so it stays a
+// consistent dark anchor regardless of the user's colour mode.
 
-.navigator-top .navbar {
-  background: rgba($nav-black, 0.95) !important;
+.onrte-top .navbar {
+  background: rgba($app-black, 0.95) !important;
   backdrop-filter: blur(12px) saturate(160%);
   -webkit-backdrop-filter: blur(12px) saturate(160%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-// §6b  Side panel
-// Transparent enough that the map remains perceptible through
-// the panel in both light and dark modes.
+// #6b  Side panel (Bootstrap Offcanvas)
+// ─────────────────────────────────────────────────────────────
 
-.navigator-panel {
+.onrte-panel {
   --bs-offcanvas-bg: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -139,13 +138,14 @@ $font-size-base: 0.9375rem; // 15 px
   box-shadow: 3px 0 28px rgba(0, 0, 0, 0.08);
 }
 
-[data-bs-theme="dark"] .navigator-panel {
+[data-bs-theme="dark"] .onrte-panel {
   --bs-offcanvas-bg: rgba(10, 18, 10, 0.82);
   border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
   box-shadow: 3px 0 28px rgba(0, 0, 0, 0.4);
 }
 
-// §6c  Panel navigation tabs
+// #6c  Panel navigation tabs
+// ─────────────────────────────────────────────────────────────
 
 .panel-nav {
   background: rgba(255, 255, 255, 0.92) !important;
@@ -157,7 +157,8 @@ $font-size-base: 0.9375rem; // 15 px
   border-bottom-color: rgba(255, 255, 255, 0.07) !important;
 }
 
-// §6d  Panel content sections
+// #6d  Panel content sections
+// ─────────────────────────────────────────────────────────────
 
 .sidebar-section.border-top {
   border-top-color: rgba(0, 0, 0, 0.07) !important;
@@ -167,8 +168,8 @@ $font-size-base: 0.9375rem; // 15 px
   border-top-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-// §6e  Icon buttons
-// White icons in the dark top bar; green on active/hover.
+// #6e  Icon buttons (panel nav + top bar)
+// ─────────────────────────────────────────────────────────────
 
 .icon-btn {
   color: var(--bs-secondary-color);
@@ -189,9 +190,10 @@ $font-size-base: 0.9375rem; // 15 px
   }
 }
 
-// §6f  Share URL textarea
+// #6f  Share URL textarea
+// ─────────────────────────────────────────────────────────────
 
-.navigator-share-textarea {
+.onrte-share-textarea {
   resize: none;
   font-size: 0.78rem;
   line-height: 1.55;
@@ -208,13 +210,17 @@ $font-size-base: 0.9375rem; // 15 px
   }
 }
 
-// §6g  Navigator layout and component styles
-// These structural styles are required for Navigator to render
-// correctly. They do not depend on the theme palette — copy
-// them verbatim into any custom theme.
+// #6g  Layout and structural styles
+// ─────────────────────────────────────────────────────────────
+// Required structural styles. Not tied to the palette — do not
+// remove when customising colours.
+//
+// ⚠ MapLibre GL JS CSS is NOT included here. Import it
+//   separately in your application entry point:
+//     import "maplibre-gl/dist/maplibre-gl.css"
 
 // Map container
-.navigator-map {
+.onrte-map {
   z-index: 1;
   position: absolute;
   top: 0;
@@ -226,13 +232,13 @@ $font-size-base: 0.9375rem; // 15 px
     width 0.3s ease;
 }
 
-.navigator-map.panel-open {
-  left: var(--navigator-panel-width, 340px);
-  width: calc(100% - var(--navigator-panel-width, 340px));
+.onrte-map.panel-open {
+  left: var(--onrte-panel-width, 340px);
+  width: calc(100% - var(--onrte-panel-width, 340px));
 }
 
 // Top navigation bar container
-.navigator-top {
+.onrte-top {
   z-index: 1040;
   position: absolute;
   top: 0;
@@ -240,18 +246,18 @@ $font-size-base: 0.9375rem; // 15 px
   width: 100%;
 }
 
-.navigator-top nav.navbar {
+.onrte-top nav.navbar {
   touch-action: pan-x pan-y;
 }
 
-.navigator-top .navbar-toggler:focus {
+.onrte-top .navbar-toggler:focus {
   box-shadow: none;
   border: 0;
   outline: none;
 }
 
 // Side panel — positioned below the top bar
-.navigator-panel {
+.onrte-panel {
   top: 86px !important;
   height: calc(100% - 73px) !important;
 }
@@ -298,28 +304,19 @@ $font-size-base: 0.9375rem; // 15 px
   pointer-events: none;
 }
 
-// OGIS logo in the About panel
-.ogis-logo {
-  padding: 3px;
-  margin-left: 10px;
-  float: right;
-  line-height: 1;
-  background: #002400;
-}
-
 // GPS locate markers (rendered into the MapLibre map)
-.navigator-locate-position,
-.navigator-locate-heading {
+.onrte-locate-position,
+.onrte-locate-heading {
   color: var(--bs-primary);
   line-height: 0;
   pointer-events: none;
 }
 
 // Modal z-index — must sit above the top nav bar
-.navigator-modal-backdrop {
+.onrte-modal-backdrop {
   z-index: 1065;
 }
 
-.navigator-modal {
+.onrte-modal {
   z-index: 1070;
 }

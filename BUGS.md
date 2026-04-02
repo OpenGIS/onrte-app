@@ -1,47 +1,9 @@
-1/ the recording feature works fine in dev, but when deployed to github pages I get the following console error:
+# Bugs
 
-Object { message: "mo is not defined", stack: "" }
-​
-message: "mo is not defined"
-​
-stack: ""
-​
-<prototype>: Error.prototype { stack: "", … }
-index-CykLVemN.js:1:77723
+1/ There is a bug with Chrome desktop for mac (macOS only, is fine on Windows) where the map is not zoomable using the mouse scroll wheel. The app works correctly everywhere else tested, including Chrome mobile. Instead of zooming the map, the entire app gets "pulled" up and down, indicating that the browser is treating the map gesture as a scroll instead of a zoom. Diagnose this issue and implement a fix.
 
-fire https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-fire https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-fire https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-\_dispatchWorkerUpdate https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-s https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-(Async: promise callback)
-c https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-o https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-(Async: promise callback)
-c https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-\_dispatchWorkerUpdate https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-\_updateWorkerData https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-\_updateWorkerData https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-load https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-t https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-load https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-onAdd https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-onAdd https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-addSource https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:754
-addSource https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-l https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-hv https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-n https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-emit https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-As https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-fire https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-\_render https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-triggerRepaint https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:756
-o https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
-(Async: FrameRequestCallback)
-frame https://www.morehawes.ca/onrte-app/assets/index-CykLVemN.js:1
+2/ @src/components/ui/top/locate.vue contains an element with id locate-button. However because Navigator support multiple instances, this should be either scoped to the instance or use a class instead of an id. Find and replace all uses of HTML id attributes.
+
+3/ Modals @src/modals/\*.md do not respect the dark theme and display with a white background and black text. Update the modal styles to be compatible with both light and dark themes.
+
+4/ Currently the @src/components/modals/locate-confirm.vue is only presented to the user when they click the locate button. The logic behind this modal is that the user has not yet completed a successful geolocation - which both the record and locate feature use. The code should be refactored so either event triggers this confirmation modal before actual geolocation attempt is made.

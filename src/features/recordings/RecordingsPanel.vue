@@ -1,8 +1,8 @@
 <!-- RecordingsPanel.vue — side-panel content for the Recordings feature -->
 <script setup>
 import { inject, computed } from 'vue';
-import { useSettings } from '@ogis/navigator';
-import { formatDuration, formatDistance } from './recordings.js';
+import { useSettings } from '@/composables/useSettings.js';
+import { formatDuration, formatDistance } from './index.js';
 
 const { isMetric } = useSettings();
 

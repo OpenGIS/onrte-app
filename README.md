@@ -1,32 +1,79 @@
-# On Route
+# On Route App
 
-An outdoor map for everyone, right in the browser. No app stores, no accounts, no tracking. Powered by Open-Source.
+A navigation and mapping tool for everyone, right in the browser.
+
+No API keys, no registration, no app stores and no invasions of privacy. Just open the app and get where you are going.
+
+Built with the [OpenStreetMap](https://www.openstreetmap.org/) ecosystem. Special thanks to [OpenFreeMap](https://openfreemap.org/) for tile hosting.
+
+## Features
+
+- Detailed, free global map — no install, no account
+- Globe view on first load
+- GPS locate with compass heading
+- Record GPS tracks and export as GPX
+- Offline capable (cached tiles and data)
+- Multilingual (auto-detects browser language)
+- Shareable map links
+- Map view persisted between sessions
+- Light and dark mode
+- Works on any device
+
+## Planned Changes
+
+- Worldwide language support
+- Search ([Nominatim](https://nominatim.org/) integration)
+- Better handling of denied location permissions
+- Improved offline capabilities
+- Dark map style
+
+## Drawbacks and Limitations
+
+- Location permissions are required for GPS/Compass features. Some users have a deny-all approach to browser permissions and changing them varies between browsers and devices.
+- The app does not work in the background or when the device is locked — a common limitation of web apps.
+- Depending on a single tile provider ([OpenFreeMap](https://openfreemap.org/)) creates a single point of failure. Self-hosting is an option worth pursuing.
+- The app requires an initial connection to load assets and map tiles, even though it works offline thereafter.
+
+## Thanks Open Source!
+
+| Component | Source |
+|-----------|--------|
+| **Map Data** | &copy; [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) |
+| **Tile Hosting** | [OpenFreeMap](https://openfreemap.org) |
+| **Rendering** | [MapLibre GL JS](https://maplibre.org/) |
+| **Tile Schema** | [OpenMapTiles](https://www.openmaptiles.org/) / [OSM Bright](https://github.com/openmaptiles/osm-bright-gl-style) |
+| **User Interface** | [Vue JS](https://vuejs.org/) / [Bootstrap](https://getbootstrap.com/) |
 
 ## Development
 
+### Install
+
 ```bash
 npm install
+```
+
+### Run
+
+```bash
 npm run dev
 ```
 
-## Build
+### Test
+
+```bash
+npm test                                          # unit tests (vitest, <1 s)
+npm run test:e2e -- tests/e2e/{spec}.spec.js      # single E2E spec
+npm run test:e2e                                  # full E2E suite
+```
+
+See [docs/8.testing.md](docs/8.testing.md) for the testing strategy.
+
+### Build
 
 ```bash
 npm run build
 ```
 
-## Testing
+## Docs
 
-Tests are written with [Vitest](https://vitest.dev/).
-
-Run the test suite once:
-
-```bash
-npm test
-```
-
-Run in watch mode (re-runs on file changes):
-
-```bash
-npm run test:watch
-```
+See [docs/README.md](docs/README.md) for the full developer documentation.

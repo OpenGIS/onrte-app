@@ -1,7 +1,7 @@
 <!-- RecordButton.vue — centre-aligned navbar button that toggles recording -->
 <script setup>
 import { inject, computed } from 'vue';
-import { useUI } from '@ogis/navigator';
+import { useUI } from '@/composables/useUI.js';
 
 const { state, start, pause, resume } = inject('recordings');
 const { setActivePanel, openPanel } = useUI();
@@ -9,13 +9,14 @@ const { setActivePanel, openPanel } = useUI();
 const toggle = () => {
   if (state.isRecording) {
     pause();
-    // Open the Recordings panel so the user can save or discard
     setActivePanel('record');
     openPanel();
   } else if (state.isPaused) {
     resume();
   } else {
     start();
+    setActivePanel('record');
+    openPanel();
   }
 };
 
@@ -35,6 +36,7 @@ const label = computed(() => {
 <template>
   <button
     type="button"
+    id="recordings-button"
     class="border-0 bg-transparent text-white d-flex flex-column align-items-center"
     @click="toggle"
   >

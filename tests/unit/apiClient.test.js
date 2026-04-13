@@ -33,6 +33,9 @@ describe("api/client", () => {
 
         expect(createMock).toHaveBeenCalledWith(expect.objectContaining({
             withCredentials: true,
+            withXSRFToken: true,
+            xsrfCookieName: "XSRF-TOKEN",
+            xsrfHeaderName: "X-XSRF-TOKEN",
             headers: expect.objectContaining({
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "application/json",

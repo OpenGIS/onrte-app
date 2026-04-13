@@ -21,6 +21,9 @@ if (!apiBaseUrl && !TEST_MODE) {
 export const api = axios.create({
     baseURL: apiBaseUrl || "",
     withCredentials: true,
+    withXSRFToken: true,
+    xsrfCookieName: "XSRF-TOKEN",
+    xsrfHeaderName: "X-XSRF-TOKEN",
     headers: {
         "X-Requested-With": "XMLHttpRequest",
         Accept: "application/json",

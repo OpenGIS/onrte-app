@@ -1,6 +1,6 @@
 {
   "name": "onrte-app",
-  "version": "2.1.8",
+  "version": "2.1.9",
   "type": "module",
   "description": "On Route — Get where you are going.",
   "private": true,
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@ogis/icons": "^0.2.8",
+    "axios": "^1.15.0",
     "bootstrap": "^5.3.8",
     "magvar": "^2.0.1",
     "maplibre-gl": "^5.0.0",

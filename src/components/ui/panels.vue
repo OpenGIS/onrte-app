@@ -27,12 +27,22 @@ const builtInTabs = [
 const buttonTabs = computed(() =>
   buttonsRef.value
     .filter((b) => b.panel)
-    .map((b) => ({ id: b.id, icon: b.icon, label: b.panel.title || b.label })),
+    .map((b) => ({
+      id: b.id,
+      icon: b.icon,
+      labelKey: b.panel.titleKey || b.labelKey || null,
+      label: b.panel.title || b.label,
+    })),
 );
 
 // Standalone custom panels (no toolbar button required)
 const panelTabs = computed(() =>
-  panelsRef.value.map((p) => ({ id: p.id, icon: p.icon, label: p.title })),
+  panelsRef.value.map((p) => ({
+    id: p.id,
+    icon: p.icon,
+    labelKey: p.titleKey || null,
+    label: p.title,
+  })),
 );
 
 const tabs = computed(() => [
@@ -150,5 +160,4 @@ watch(
     @click="closePanel()"
   ></div>
 </template>
-
 

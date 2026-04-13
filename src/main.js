@@ -11,6 +11,7 @@ import { useSettings as _useSettings } from "./composables/useSettings.js";
 import { useLocale as _useLocale } from "./composables/useLocale.js";
 
 import { RecordingsFeature } from "./features/recordings/index.js";
+import { AccountFeature } from "./features/account/index.js";
 
 // --- Instance config ---
 // The instance ID scopes localStorage keys, enabling iframe isolation.
@@ -99,6 +100,7 @@ const featureCtx = {
 
 // --- Install core features ---
 RecordingsFeature.install(featureCtx);
+AccountFeature.install(featureCtx);
 
 // --- Mount ---
 app.mount("#app");

@@ -48,7 +48,7 @@ const handleCustomClick = (btn) => {
           <IconButton
             v-else
             :icon="btn.icon"
-            :label="btn.label"
+            :label="btn.labelKey ? t(btn.labelKey) : btn.label"
             :data-custom-button="btn.id"
             @click="handleCustomClick(btn)"
           />
@@ -64,7 +64,7 @@ const handleCustomClick = (btn) => {
           <IconButton
             v-else
             :icon="btn.icon"
-            :label="btn.label"
+            :label="btn.labelKey ? t(btn.labelKey) : btn.label"
             :data-custom-button="btn.id"
             @click="handleCustomClick(btn)"
           />
@@ -79,7 +79,7 @@ const handleCustomClick = (btn) => {
           <IconButton
             v-else
             :icon="btn.icon"
-            :label="btn.label"
+            :label="btn.labelKey ? t(btn.labelKey) : btn.label"
             :data-custom-button="btn.id"
             @click="handleCustomClick(btn)"
           />
@@ -95,5 +95,4 @@ const handleCustomClick = (btn) => {
 
   <About />
 </template>
-
 

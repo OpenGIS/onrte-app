@@ -54,6 +54,12 @@ npm install
 
 ### Run
 
+Set the backend API origin for cross-subdomain auth/API calls:
+
+```bash
+echo "VITE_API_BASE_URL=https://api.example.com" > .env.local
+```
+
 ```bash
 npm run dev
 ```

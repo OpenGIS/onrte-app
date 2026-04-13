@@ -5,6 +5,7 @@
   "menu.settings": "Paramètres",
   "menu.privacy": "Vie privée",
   "menu.about": "À propos",
+  "menu.account": "Compte",
 
   "modal.welcome.title": "On Route",
   "modal.welcome.introOne": "Une carte pour explorer, naviguer et enregistrer vos aventures.",
@@ -47,6 +48,22 @@
   "panel.settings.imperial": "Impérial (mi, mph)",
   "panel.settings.language": "Langue",
 
+  "panel.account.title": "Compte",
+  "panel.account.description": "Connectez-vous avec un lien magique pour relier cette application à vos API de compte On Route.",
+  "panel.account.loading": "Vérification de la session du compte…",
+  "panel.account.emailLabel": "E-mail",
+  "panel.account.emailPlaceholder": "vous@exemple.com",
+  "panel.account.requestMagicLink": "Envoyer un lien magique",
+  "panel.account.requesting": "Envoi…",
+  "panel.account.checkSession": "Vérifier la session",
+  "panel.account.signedIn": "Connecté",
+  "panel.account.signedInAs": "Connecté en tant que",
+  "panel.account.memberSince": "Membre depuis",
+  "panel.account.logout": "Se déconnecter",
+  "panel.account.errorSession": "Impossible de charger la session du compte.",
+  "panel.account.errorLogout": "Impossible de se déconnecter pour le moment.",
+  "panel.account.retryAfterHint": "Attendez un instant puis réessayez.",
+
   "panel.view.title": "Vue actuelle",
   "panel.view.shareDescription": "Partagez un lien vers cette vue de la carte.",
   "panel.view.copyLink": "Copier ce lien",
@@ -71,4 +88,3 @@
   "modal.locate.close": "Fermer",
   "modal.locate.retry": "Réessayer"
 }
-

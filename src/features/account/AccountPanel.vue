@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useLocale } from "@/composables/useLocale";
+import { useResourceOverview } from "@/composables/resources/useResourceOverview";
 import { useAuthStore } from "@/stores/authStore";
 
 const { t } = useLocale();
@@ -18,6 +19,16 @@ const {
     logout,
     clearFeedback,
 } = useAuthStore();
+const {
+    maps,
+    collections,
+    loading: resourcesLoading,
+    error: resourcesError,
+    mapCount,
+    collectionCount,
+    refresh: refreshResources,
+    clear: clearResources,
+} = useResourceOverview();
 
 const email = ref("");
 const panelError = ref(null);
@@ -33,12 +44,43 @@ const memberSinceLabel = computed(() => {
     return date.toLocaleString();
 });
 
+const visibleMaps = computed(() => maps.value.slice(0, 5));
+const visibleCollections = computed(() => collections.value.slice(0, 5));
+
+const resourcesErrorMessage = computed(() => {
+    if (resourcesError.value === "unauthorized") {
+        return t("panel.account.resourcesUnauthorized");
+    }
+
+    if (resourcesError.value === "load-failed") {
+        return t("panel.account.resourcesError");
+    }
+
+    return null;
+});
+
+const visibilityLabel = (visibility) => (
+    visibility === "public"
+        ? t("panel.account.visibilityPublic")
+        : t("panel.account.visibilityPrivate")
+);
+
+const resourceLabel = (resource) => resource?.title || resource?.slug || resource?.id || "—";
+
 const refreshSessionState = async () => {
     panelError.value = null;
     try {
-        await refreshSession();
+        const session = await refreshSession();
+
+        if (!session) {
+            clearResources();
+            return;
+        }
+
+        await refreshResources();
     } catch {
         panelError.value = t("panel.account.errorSession");
+        clearResources();
     }
 };
 
@@ -56,6 +98,8 @@ const logoutSession = async () => {
         await logout();
     } catch {
         panelError.value = t("panel.account.errorLogout");
+    } finally {
+        clearResources();
     }
 };
 
@@ -99,6 +143,14 @@ onMounted(() => {
                         {{ t("panel.account.checkSession") }}
                     </button>
                     <button
+                        id="account-refresh-resources"
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        @click="refreshResources"
+                    >
+                        {{ t("panel.account.refreshResources") }}
+                    </button>
+                    <button
                         id="account-logout"
                         type="button"
                         class="btn btn-sm btn-outline-danger"
@@ -106,6 +158,74 @@ onMounted(() => {
                     >
                         {{ t("panel.account.logout") }}
                     </button>
+                </div>
+
+                <div class="mt-3 pt-3 border-top">
+                    <h6 class="mb-2">{{ t("panel.account.resourcesTitle") }}</h6>
+                    <p class="small text-body-secondary mb-2">
+                        <strong>{{ mapCount }}</strong> {{ t("panel.account.resourcesMaps") }},
+                        <strong>{{ collectionCount }}</strong> {{ t("panel.account.resourcesCollections") }}
+                    </p>
+
+                    <div v-if="resourcesLoading" class="small text-body-secondary">
+                        {{ t("panel.account.resourcesLoading") }}
+                    </div>
+
+                    <p
+                        v-else-if="resourcesErrorMessage"
+                        class="alert alert-warning small py-2 px-3 mb-2"
+                        role="alert"
+                    >
+                        {{ resourcesErrorMessage }}
+                    </p>
+
+                    <template v-else>
+                        <div class="mb-3">
+                            <p class="small fw-semibold text-body-secondary mb-1">
+                                {{ t("panel.account.resourcesMapLabel") }}
+                            </p>
+                            <ul
+                                v-if="visibleMaps.length"
+                                class="list-group list-group-flush small"
+                            >
+                                <li
+                                    v-for="map in visibleMaps"
+                                    :key="map.id"
+                                    class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center"
+                                >
+                                    <span class="text-truncate pe-2">{{ resourceLabel(map) }}</span>
+                                    <span class="badge text-bg-light">{{ visibilityLabel(map.visibility) }}</span>
+                                </li>
+                            </ul>
+                            <p v-else class="small text-body-secondary mb-0">
+                                {{ t("panel.account.noMaps") }}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p class="small fw-semibold text-body-secondary mb-1">
+                                {{ t("panel.account.resourcesCollectionLabel") }}
+                            </p>
+                            <ul
+                                v-if="visibleCollections.length"
+                                class="list-group list-group-flush small"
+                            >
+                                <li
+                                    v-for="collection in visibleCollections"
+                                    :key="collection.id"
+                                    class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center"
+                                >
+                                    <span class="text-truncate pe-2">{{ resourceLabel(collection) }}</span>
+                                    <span class="badge text-bg-light">
+                                        {{ visibilityLabel(collection.visibility) }}
+                                    </span>
+                                </li>
+                            </ul>
+                            <p v-else class="small text-body-secondary mb-0">
+                                {{ t("panel.account.noCollections") }}
+                            </p>
+                        </div>
+                    </template>
                 </div>
             </template>
 

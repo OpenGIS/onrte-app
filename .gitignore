@@ -27,4 +27,3 @@ dist-ssr
 playwright-report/
 test-results/
 .env
-package-lock.json

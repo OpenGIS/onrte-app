@@ -11,9 +11,11 @@ import { useSettings as _useSettings } from "./composables/useSettings.js";
 import { useLocale as _useLocale } from "./composables/useLocale.js";
 
 import { RecordingsFeature } from "./features/recordings/index.js";
-import { AccountFeature } from "./features/account/index.js";
-import { MapsFeature } from "./features/maps/index.js";
-import { CollectionsFeature } from "./features/collections/index.js";
+// Auth features — commented out: the app is currently in SPA front-end only mode
+// (no backend). Re-enable when the API/auth backend is available.
+// import { AccountFeature } from "./features/account/index.js";
+// import { MapsFeature } from "./features/maps/index.js";
+// import { CollectionsFeature } from "./features/collections/index.js";
 
 // --- Instance config ---
 // The instance ID scopes localStorage keys, enabling iframe isolation.
@@ -102,9 +104,10 @@ const featureCtx = {
 
 // --- Install core features ---
 RecordingsFeature.install(featureCtx);
-AccountFeature.install(featureCtx);
-MapsFeature.install(featureCtx);
-CollectionsFeature.install(featureCtx);
+// Auth features — commented out (SPA front-end only mode).
+// AccountFeature.install(featureCtx);
+// MapsFeature.install(featureCtx);
+// CollectionsFeature.install(featureCtx);
 
 // --- Mount ---
 app.mount("#app");

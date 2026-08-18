@@ -7,7 +7,8 @@
 
 /** Default map constructor options. */
 export const mapDefaults = {
-    style: "https://tiles.openfreemap.org/styles/bright",
+    // style: "https://tiles.openfreemap.org/styles/bright",
+    style: "https://raw.githubusercontent.com/OpenGIS/outdoors/refs/heads/master/style.json",
     attributionControl: true,
     center: [0, 0],
     zoom: 1,

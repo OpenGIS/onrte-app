@@ -6,6 +6,9 @@ No API keys, no registration, no app stores and no invasions of privacy. Just op
 
 Built with the [OpenStreetMap](https://www.openstreetmap.org/) ecosystem. Special thanks to [OpenFreeMap](https://openfreemap.org/) for tile hosting.
 
+> [!NOTE]
+> The app is currently in **SPA front-end only mode** — the account, maps and collections features (which require a backend) are disabled in the UI.
+
 ## Features
 
 - Detailed, free global map — no install, no account
@@ -55,6 +58,9 @@ npm install
 ### Run
 
 Set the backend API origin for cross-subdomain auth/API calls:
+
+> [!NOTE]
+> Only needed when the auth/backend features are re-enabled — the app currently runs in SPA front-end only mode.
 
 ```bash
 echo "VITE_API_BASE_URL=https://api.example.com" > .env.local

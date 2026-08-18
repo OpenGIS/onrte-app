@@ -2,6 +2,9 @@
 
 Developer documentation for the On Route App codebase.
 
+> [!NOTE]
+> The app is currently in **SPA front-end only mode** — the account, maps and collections features (which require a backend) are disabled in the UI.
+
 ---
 
 ## Contents

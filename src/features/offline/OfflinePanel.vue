@@ -1,0 +1,481 @@
+<!-- OfflinePanel.vue — side-panel content for the Offline download feature -->
+<script setup>
+import { ref, computed, inject, onUnmounted, onMounted } from 'vue';
+
+const {
+  regions,
+  estimate,
+  download,
+  addRegion,
+  deleteRegion,
+  showRegion,
+  getStorageInfo,
+  requestPersistence,
+  getMap,
+} = inject('offline');
+
+// --- Region drawing state ---
+const drawing = ref(false);
+const drawStart = ref(null); // { lng, lat } at mousedown
+const bounds = ref(null); // { west, south, east, north }
+const overlayStyle = ref({ display: 'none' });
+let moveHandler = null;
+let upHandler = null;
+let downHandler = null;
+
+const map = () => getMap();
+
+// --- Estimate state (declared early so drawing can reset it) ---
+const estimateState = ref(null); // { tileCount, estimatedBytes }
+const estimateError = ref('');
+
+const projectToOverlay = () => {
+  const m = map();
+  const container = m?.getContainer();
+  if (!m || !container) return null;
+  const rect = container.getBoundingClientRect();
+  return (lngLat) => {
+    const p = m.project([lngLat.lng, lngLat.lat]);
+    return {
+      left: rect.left + p.x,
+      top: rect.top + p.y,
+    };
+  };
+};
+
+const updateOverlay = (start, current) => {
+  const proj = projectToOverlay();
+  if (!proj) return;
+  const a = proj(start);
+  const b = proj(current);
+  const left = Math.min(a.left, b.left);
+  const top = Math.min(a.top, b.top);
+  const width = Math.abs(b.left - a.left);
+  const height = Math.abs(b.top - a.top);
+  overlayStyle.value = {
+    display: 'block',
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+  };
+};
+
+const startDraw = () => {
+  const m = map();
+  if (!m) return;
+  bounds.value = null;
+  estimateState.value = null;
+  overlayStyle.value = { display: 'none' };
+  drawing.value = true;
+
+  // Stop MapLibre panning/box-zoom while we capture the drag ourselves
+  if (m.dragPan) m.dragPan.disable();
+  if (m.boxZoom) m.boxZoom.disable();
+  if (m.doubleClickZoom) m.doubleClickZoom.disable();
+
+  downHandler = (e) => {
+    drawStart.value = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+  };
+
+  moveHandler = (e) => {
+    if (!drawStart.value) return;
+    updateOverlay(drawStart.value, { lng: e.lngLat.lng, lat: e.lngLat.lat });
+  };
+
+  upHandler = (e) => {
+    if (!drawStart.value) {
+      stopDraw();
+      return;
+    }
+    const start = drawStart.value;
+    const end = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+    drawStart.value = null;
+
+    // A click without an actual drag (no movement) would yield a zero-area
+    // box, so treat it as a click and skip finalising the bounds.
+    const a = m.project([start.lng, start.lat]);
+    const b = m.project([end.lng, end.lat]);
+    const dragged = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+    if (dragged < 4) {
+      overlayStyle.value = { display: 'none' };
+      stopDraw();
+      return;
+    }
+
+    bounds.value = {
+      west: Math.min(start.lng, end.lng),
+      east: Math.max(start.lng, end.lng),
+      south: Math.min(start.lat, end.lat),
+      north: Math.max(start.lat, end.lat),
+    };
+    stopDraw();
+  };
+
+  m.on('mousedown', downHandler);
+  m.on('mousemove', moveHandler);
+  m.on('mouseup', upHandler);
+};
+
+const stopDraw = () => {
+  const m = map();
+  if (m && moveHandler) m.off('mousemove', moveHandler);
+  if (m && upHandler) m.off('mouseup', upHandler);
+  if (m && downHandler) m.off('mousedown', downHandler);
+  moveHandler = null;
+  upHandler = null;
+  downHandler = null;
+  // Restore the map's default drag/zoom behaviours
+  if (m && m.dragPan) m.dragPan.enable();
+  if (m && m.boxZoom) m.boxZoom.enable();
+  if (m && m.doubleClickZoom) m.doubleClickZoom.enable();
+  drawing.value = false;
+};
+
+onUnmounted(stopDraw);
+
+// --- Zoom range controls ---
+const minZoom = ref(10);
+const maxZoom = ref(14);
+const clampZoom = (v) => Math.max(0, Math.min(22, v));
+
+// --- Estimate + warn ---
+const mayNotFit = ref(false);
+const estimateNow = async () => {
+  estimateError.value = '';
+  mayNotFit.value = false;
+  if (!bounds.value) {
+    estimateError.value = 'Select a region first.';
+    return;
+  }
+  const lo = clampZoom(minZoom.value);
+  const hi = clampZoom(maxZoom.value);
+  if (lo > hi) {
+    estimateError.value = 'Min zoom must not exceed max zoom.';
+    return;
+  }
+  const est = await estimate(bounds.value, lo, hi);
+  estimateState.value = est;
+
+  // Quota awareness: warn when the region plus current usage may exceed the
+  // storage quota, in addition to the large-region warning below.
+  const info = await getStorageInfo();
+  if (info.quota > 0 && est.estimatedBytes + info.usage > info.quota) {
+    mayNotFit.value = true;
+  }
+};
+
+const formatBytes = (bytes) => {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+};
+
+const isLarge = computed(() =>
+  estimateState.value
+    ? estimateState.value.estimatedBytes > 200 * 1024 * 1024
+    : false,
+);
+
+// --- Download ---
+const downloading = ref(false);
+const progress = ref({ done: 0, total: 0 });
+const downloadError = ref('');
+const abortController = ref(null);
+
+const runDownload = async () => {
+  if (!estimateState.value) {
+    await estimateNow();
+    if (!estimateState.value) return;
+  }
+  if (isLarge.value) {
+    const ok = window.confirm(
+      `This region is large (${formatBytes(estimateState.value.estimatedBytes)}). ` +
+        'Downloading may take a while. Continue?',
+    );
+    if (!ok) return;
+  }
+
+  // Request persistent storage (user has just committed to a download).
+  // Resolves quickly; the download proceeds in parallel.
+  const persistPromise = requestPersistence();
+
+  const lo = clampZoom(minZoom.value);
+  const hi = clampZoom(maxZoom.value);
+  abortController.value = new AbortController();
+
+  downloading.value = true;
+  downloadError.value = '';
+  progress.value = { done: 0, total: 0 };
+
+  try {
+    const result = await download({
+      bounds: bounds.value,
+      minZoom: lo,
+      maxZoom: hi,
+      signal: abortController.value.signal,
+      onProgress: (done, total) => {
+        progress.value = { done, total };
+      },
+    });
+    addRegion({
+      name: `Region ${regions.length + 1}`,
+      bounds: { ...bounds.value },
+      minZoom: lo,
+      maxZoom: hi,
+      tileCount: result.tileCount,
+      estimatedBytes: estimateState.value.estimatedBytes,
+    });
+    await persistPromise;
+    refreshStorage();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      downloadError.value = 'Download cancelled.';
+    } else {
+      downloadError.value = err.message || 'Download failed.';
+    }
+  } finally {
+    downloading.value = false;
+    abortController.value = null;
+  }
+};
+
+const cancelDownload = () => {
+  abortController.value?.abort();
+};
+
+const progressPct = computed(() => {
+  const { done, total } = progress.value;
+  return total > 0 ? Math.round((done / total) * 100) : 0;
+});
+
+// --- Storage summary ---
+const storageInfo = ref({ usage: 0, quota: 0, persisted: false });
+
+const refreshStorage = async () => {
+  storageInfo.value = await getStorageInfo();
+};
+
+const storagePct = computed(() => {
+  const { usage, quota } = storageInfo.value;
+  return quota > 0 ? Math.min(100, Math.round((usage / quota) * 100)) : 0;
+});
+
+onMounted(refreshStorage);
+
+// --- Delete region ---
+const deleting = ref(false);
+const deleteError = ref('');
+
+const removeRegion = async (region) => {
+  const ok = window.confirm(
+    `Delete "${region.name}" and remove its downloaded tiles?`,
+  );
+  if (!ok) return;
+  deleteError.value = '';
+  deleting.value = true;
+  try {
+    await deleteRegion(region);
+    await refreshStorage();
+  } catch (err) {
+    deleteError.value = err.message || 'Failed to delete region.';
+  } finally {
+    deleting.value = false;
+  }
+};
+</script>
+
+<template>
+  <div class="p-3">
+    <h6 class="text-body-secondary mb-3">Offline Maps</h6>
+
+    <!-- Region selection -->
+    <p class="small text-body-secondary mb-2">
+      Drag on the map to select a region to download.
+    </p>
+    <button
+      class="btn btn-sm mb-3"
+      :class="drawing ? 'btn-warning' : 'btn-primary'"
+      @click="drawing ? stopDraw() : startDraw()"
+    >
+      {{ drawing ? 'Drawing… (drag on map)' : 'Select region' }}
+    </button>
+
+    <!-- Draw overlay: teleported to body so it escapes the offcanvas's
+         transform and can use fixed viewport coordinates -->
+    <Teleport to="body">
+      <div
+        v-if="drawing && drawStart"
+        class="offline-draw-overlay"
+        :style="overlayStyle"
+      ></div>
+    </Teleport>
+
+    <div v-if="bounds" class="small text-body-secondary mb-3">
+      <strong>Selected region</strong>
+      <div class="font-monospace">
+        W {{ bounds.west.toFixed(4) }} · S {{ bounds.south.toFixed(4) }} ·<br />
+        E {{ bounds.east.toFixed(4) }} · N {{ bounds.north.toFixed(4) }}
+      </div>
+    </div>
+
+    <!-- Zoom range -->
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label small mb-1" for="offline-minzoom">Min zoom</label>
+        <input
+          id="offline-minzoom"
+          v-model.number="minZoom"
+          type="number"
+          class="form-control form-control-sm"
+          min="0"
+          max="22"
+        />
+      </div>
+      <div class="col-6">
+        <label class="form-label small mb-1" for="offline-maxzoom">Max zoom</label>
+        <input
+          id="offline-maxzoom"
+          v-model.number="maxZoom"
+          type="number"
+          class="form-control form-control-sm"
+          min="0"
+          max="22"
+        />
+      </div>
+    </div>
+
+    <!-- Estimate -->
+    <button
+      class="btn btn-sm btn-outline-primary w-100 mb-2"
+      :disabled="!bounds || downloading"
+      @click="estimateNow"
+    >
+      Estimate size
+    </button>
+
+    <div v-if="estimateError" class="small text-danger mb-2">{{ estimateError }}</div>
+
+    <div
+      v-if="estimateState"
+      class="small text-body-secondary mb-3"
+      :class="{ 'text-danger': isLarge }"
+    >
+      <div class="d-flex justify-content-between">
+        <span>Tiles</span>
+        <strong>{{ estimateState.tileCount.toLocaleString() }}</strong>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span>Est. size</span>
+        <strong>{{ formatBytes(estimateState.estimatedBytes) }}</strong>
+      </div>
+      <div v-if="isLarge" class="text-danger mt-1">
+        Large region — downloading may take a while.
+      </div>
+      <div v-if="mayNotFit" class="text-danger mt-1">
+        This region may not fit in available storage — it could exceed the
+        quota. Consider a smaller area or lower max zoom.
+      </div>
+    </div>
+
+    <!-- Download / progress -->
+    <template v-if="downloading">
+      <div class="progress mb-2" style="height: 8px">
+        <div
+          class="progress-bar bg-success"
+          role="progressbar"
+          :style="{ width: progressPct + '%' }"
+          :aria-valuenow="progressPct"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        ></div>
+      </div>
+      <div class="d-flex justify-content-between small text-body-secondary mb-2">
+        <span>{{ progress.done.toLocaleString() }} / {{ progress.total.toLocaleString() }}</span>
+        <span>{{ progressPct }}%</span>
+      </div>
+      <button class="btn btn-sm btn-outline-danger w-100" @click="cancelDownload">
+        Cancel
+      </button>
+    </template>
+    <button
+      v-else
+      class="btn btn-sm btn-success w-100"
+      :disabled="!bounds"
+      @click="runDownload"
+    >
+      Download region
+    </button>
+
+    <div v-if="downloadError" class="small text-danger mt-2">{{ downloadError }}</div>
+
+    <!-- Storage summary -->
+    <hr class="my-3 opacity-25" />
+    <h6 class="text-body-secondary">Storage</h6>
+    <div class="small text-body-secondary mb-1 d-flex justify-content-between">
+      <span>{{ formatBytes(storageInfo.usage) }} of {{ formatBytes(storageInfo.quota) }} used</span>
+      <span>{{ storageInfo.persisted ? 'Persistent' : 'May be cleared' }}</span>
+    </div>
+    <div class="progress mb-3" style="height: 6px">
+      <div
+        class="progress-bar bg-success"
+        role="progressbar"
+        :style="{ width: storagePct + '%' }"
+        :aria-valuenow="storagePct"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      ></div>
+    </div>
+
+    <!-- Downloaded regions -->
+    <hr class="my-3 opacity-25" />
+    <h6 class="text-body-secondary">Downloaded Regions</h6>
+
+    <p v-if="!regions.length" class="text-body-tertiary small">
+      No regions downloaded yet.
+    </p>
+
+    <div v-for="region in regions" :key="region.id" class="border-top py-2">
+      <div class="d-flex justify-content-between align-items-start small">
+        <div>
+          <div><strong>{{ region.name }}</strong></div>
+          <div class="text-body-secondary">
+            z{{ region.minZoom }}–{{ region.maxZoom }} · {{ region.tileCount.toLocaleString() }} tiles
+          </div>
+          <div class="text-body-tertiary">
+            {{ formatBytes(region.estimatedBytes) }} · {{ new Date(region.createdAt).toLocaleString() }}
+          </div>
+        </div>
+        <div class="d-flex gap-1">
+          <button
+            class="btn btn-sm btn-outline-primary"
+            :disabled="deleting"
+            @click="showRegion(region)"
+          >
+            Show
+          </button>
+          <button
+            class="btn btn-sm btn-outline-danger"
+            :disabled="deleting"
+            @click="removeRegion(region)"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="deleteError" class="small text-danger mt-2">{{ deleteError }}</div>
+  </div>
+</template>
+
+<style scoped>
+.offline-draw-overlay {
+  position: fixed;
+  border: 2px solid #39d353 !important;
+  background: rgba(57, 211, 83, 0.2);
+  pointer-events: none;
+  z-index: 999;
+}
+</style>

@@ -11,6 +11,7 @@ import { useSettings as _useSettings } from "./composables/useSettings.js";
 import { useLocale as _useLocale } from "./composables/useLocale.js";
 
 import { RecordingsFeature } from "./features/recordings/index.js";
+import { OfflineFeature } from "./features/offline/index.js";
 // Auth features — commented out: the app is currently in SPA front-end only mode
 // (no backend). Re-enable when the API/auth backend is available.
 // import { AccountFeature } from "./features/account/index.js";
@@ -104,6 +105,7 @@ const featureCtx = {
 
 // --- Install core features ---
 RecordingsFeature.install(featureCtx);
+OfflineFeature.install(featureCtx);
 // Auth features — commented out (SPA front-end only mode).
 // AccountFeature.install(featureCtx);
 // MapsFeature.install(featureCtx);
@@ -111,3 +113,12 @@ RecordingsFeature.install(featureCtx);
 
 // --- Mount ---
 app.mount("#app");
+
+// --- Service worker ---
+// App shell service worker for offline support. Registered in every
+// environment (dev included) so the offline shell can be exercised.
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+        console.error("Service worker registration failed:", error);
+    });
+}

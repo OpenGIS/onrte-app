@@ -6,7 +6,7 @@ vi.mock("vue", () => {
 	let injectReturn = "app";
 	return {
 		inject: vi.fn(() => injectReturn),
-		reactive: vi.fn((obj) => ({ ...obj })),
+		reactive: vi.fn((obj) => (Array.isArray(obj) ? [...obj] : { ...obj })),
 		watch: vi.fn(),
 		__setInjectReturn: (val) => {
 			injectReturn = val;
@@ -114,6 +114,31 @@ describe("useStorage", () => {
 
 			const stored = JSON.parse(localStorage.getItem("onrte_data_app"));
 			expect(stored.count).toBe(5);
+		});
+	});
+
+	describe("array default state", () => {
+		it("returns a reactive array where push and length work", () => {
+			const regions = useStorage("offline-regions", []);
+			expect(Array.isArray(regions)).toBe(true);
+			expect(regions.length).toBe(0);
+
+			regions.push({ id: 1, name: "Region 1" });
+			expect(regions.length).toBe(1);
+			expect(regions[0].id).toBe(1);
+		});
+
+		it("persists array mutations to localStorage", () => {
+			useStorage("offline-regions", []);
+
+			const [, callback] = watch.mock.calls[0];
+			callback([{ id: 1, name: "Region 1" }]);
+
+			const stored = JSON.parse(
+				localStorage.getItem("onrte_offline-regions_app"),
+			);
+			expect(Array.isArray(stored)).toBe(true);
+			expect(stored).toEqual([{ id: 1, name: "Region 1" }]);
 		});
 	});
 });

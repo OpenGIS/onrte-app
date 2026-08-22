@@ -15,19 +15,21 @@ Built with the [OpenStreetMap](https://www.openstreetmap.org/) ecosystem. Specia
 - Globe view on first load
 - GPS locate with compass heading
 - Record GPS tracks and export as GPX
-- Offline capable (cached tiles and data)
+- Download map regions for offline use (via a service worker)
 - Multilingual (auto-detects browser language)
 - Shareable map links
 - Map view persisted between sessions
 - Light and dark mode
 - Works on any device
 
+> [!NOTE]
+> **Offline maps** — drag a region on the map to download its tiles and glyphs for offline use. A hand-rolled service worker (`public/sw.js`) caches the app shell and map resources; see [docs/10.offline.md](docs/10.offline.md).
+
 ## Planned Changes
 
 - Worldwide language support
 - Search ([Nominatim](https://nominatim.org/) integration)
 - Better handling of denied location permissions
-- Improved offline capabilities
 - Dark map style
 
 ## Drawbacks and Limitations

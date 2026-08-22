@@ -12,7 +12,9 @@ import { reactive, watch, inject } from "vue";
 export function useStorage(namespace, defaultState = {}, instanceId) {
     const id = instanceId ?? inject("onrteAppId", "app");
     const key = `onrte_${namespace}_${id}`;
-    const state = reactive({ ...defaultState });
+    const state = Array.isArray(defaultState)
+        ? reactive([...defaultState])
+        : reactive({ ...defaultState });
 
     try {
         const stored = localStorage.getItem(key);

@@ -1,6 +1,9 @@
 <!-- OfflinePanel.vue — side-panel content for the Offline download feature -->
 <script setup>
-import { ref, computed, inject, onUnmounted, onMounted } from 'vue';
+import { ref, computed, inject, onUnmounted, onMounted } from "vue";
+import { useUI } from "@/composables/useUI";
+
+const { closePanel, openPanel, isDesktop } = useUI();
 
 const {
   regions,
@@ -12,22 +15,23 @@ const {
   getStorageInfo,
   requestPersistence,
   getMap,
-} = inject('offline');
+} = inject("offline");
 
 // --- Region drawing state ---
 const drawing = ref(false);
 const drawStart = ref(null); // { lng, lat } at mousedown
 const bounds = ref(null); // { west, south, east, north }
-const overlayStyle = ref({ display: 'none' });
+const overlayStyle = ref({ display: "none" });
 let moveHandler = null;
 let upHandler = null;
 let downHandler = null;
+let cancelHandler = null;
 
 const map = () => getMap();
 
 // --- Estimate state (declared early so drawing can reset it) ---
 const estimateState = ref(null); // { tileCount, estimatedBytes }
-const estimateError = ref('');
+const estimateError = ref("");
 
 const projectToOverlay = () => {
   const m = map();
@@ -53,8 +57,8 @@ const updateOverlay = (start, current) => {
   const width = Math.abs(b.left - a.left);
   const height = Math.abs(b.top - a.top);
   overlayStyle.value = {
-    display: 'block',
-    position: 'fixed',
+    display: "block",
+    position: "fixed",
     left: `${left}px`,
     top: `${top}px`,
     width: `${width}px`,
@@ -67,13 +71,16 @@ const startDraw = () => {
   if (!m) return;
   bounds.value = null;
   estimateState.value = null;
-  overlayStyle.value = { display: 'none' };
+  overlayStyle.value = { display: "none" };
   drawing.value = true;
+  if (!isDesktop.value) closePanel();
 
   // Stop MapLibre panning/box-zoom while we capture the drag ourselves
   if (m.dragPan) m.dragPan.disable();
   if (m.boxZoom) m.boxZoom.disable();
   if (m.doubleClickZoom) m.doubleClickZoom.disable();
+  if (m.touchZoomRotate) m.touchZoomRotate.disable();
+  if (m.touchPitch) m.touchPitch.disable();
 
   downHandler = (e) => {
     drawStart.value = { lng: e.lngLat.lng, lat: e.lngLat.lat };
@@ -99,7 +106,7 @@ const startDraw = () => {
     const b = m.project([end.lng, end.lat]);
     const dragged = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
     if (dragged < 4) {
-      overlayStyle.value = { display: 'none' };
+      overlayStyle.value = { display: "none" };
       stopDraw();
       return;
     }
@@ -110,27 +117,47 @@ const startDraw = () => {
       south: Math.min(start.lat, end.lat),
       north: Math.max(start.lat, end.lat),
     };
+    stopDraw({ reopen: true });
+  };
+
+  cancelHandler = () => {
+    drawStart.value = null;
+    overlayStyle.value = { display: "none" };
     stopDraw();
   };
 
-  m.on('mousedown', downHandler);
-  m.on('mousemove', moveHandler);
-  m.on('mouseup', upHandler);
+  m.on("mousedown", downHandler);
+  m.on("mousemove", moveHandler);
+  m.on("mouseup", upHandler);
+  m.on("touchstart", downHandler);
+  m.on("touchmove", moveHandler);
+  m.on("touchend", upHandler);
+  m.on("touchcancel", cancelHandler);
 };
 
-const stopDraw = () => {
+const stopDraw = (opts = {}) => {
   const m = map();
-  if (m && moveHandler) m.off('mousemove', moveHandler);
-  if (m && upHandler) m.off('mouseup', upHandler);
-  if (m && downHandler) m.off('mousedown', downHandler);
+  if (m && moveHandler) m.off("mousemove", moveHandler);
+  if (m && upHandler) m.off("mouseup", upHandler);
+  if (m && downHandler) m.off("mousedown", downHandler);
+  if (m && moveHandler) m.off("touchmove", moveHandler);
+  if (m && upHandler) m.off("touchend", upHandler);
+  if (m && downHandler) m.off("touchstart", downHandler);
+  if (m && cancelHandler) m.off("touchcancel", cancelHandler);
   moveHandler = null;
   upHandler = null;
   downHandler = null;
+  cancelHandler = null;
   // Restore the map's default drag/zoom behaviours
   if (m && m.dragPan) m.dragPan.enable();
   if (m && m.boxZoom) m.boxZoom.enable();
   if (m && m.doubleClickZoom) m.doubleClickZoom.enable();
+  if (m && m.touchZoomRotate) m.touchZoomRotate.enable();
+  if (m && m.touchPitch) m.touchPitch.enable();
   drawing.value = false;
+  if (opts.reopen && !isDesktop.value && bounds.value) {
+    openPanel();
+  }
 };
 
 onUnmounted(stopDraw);
@@ -143,16 +170,16 @@ const clampZoom = (v) => Math.max(0, Math.min(22, v));
 // --- Estimate + warn ---
 const mayNotFit = ref(false);
 const estimateNow = async () => {
-  estimateError.value = '';
+  estimateError.value = "";
   mayNotFit.value = false;
   if (!bounds.value) {
-    estimateError.value = 'Select a region first.';
+    estimateError.value = "Select a region first.";
     return;
   }
   const lo = clampZoom(minZoom.value);
   const hi = clampZoom(maxZoom.value);
   if (lo > hi) {
-    estimateError.value = 'Min zoom must not exceed max zoom.';
+    estimateError.value = "Min zoom must not exceed max zoom.";
     return;
   }
   const est = await estimate(bounds.value, lo, hi);
@@ -181,7 +208,7 @@ const isLarge = computed(() =>
 // --- Download ---
 const downloading = ref(false);
 const progress = ref({ done: 0, total: 0 });
-const downloadError = ref('');
+const downloadError = ref("");
 const abortController = ref(null);
 
 const runDownload = async () => {
@@ -192,7 +219,7 @@ const runDownload = async () => {
   if (isLarge.value) {
     const ok = window.confirm(
       `This region is large (${formatBytes(estimateState.value.estimatedBytes)}). ` +
-        'Downloading may take a while. Continue?',
+        "Downloading may take a while. Continue?",
     );
     if (!ok) return;
   }
@@ -206,7 +233,7 @@ const runDownload = async () => {
   abortController.value = new AbortController();
 
   downloading.value = true;
-  downloadError.value = '';
+  downloadError.value = "";
   progress.value = { done: 0, total: 0 };
 
   try {
@@ -230,10 +257,10 @@ const runDownload = async () => {
     await persistPromise;
     refreshStorage();
   } catch (err) {
-    if (err.name === 'AbortError') {
-      downloadError.value = 'Download cancelled.';
+    if (err.name === "AbortError") {
+      downloadError.value = "Download cancelled.";
     } else {
-      downloadError.value = err.message || 'Download failed.';
+      downloadError.value = err.message || "Download failed.";
     }
   } finally {
     downloading.value = false;
@@ -266,20 +293,20 @@ onMounted(refreshStorage);
 
 // --- Delete region ---
 const deleting = ref(false);
-const deleteError = ref('');
+const deleteError = ref("");
 
 const removeRegion = async (region) => {
   const ok = window.confirm(
     `Delete "${region.name}" and remove its downloaded tiles?`,
   );
   if (!ok) return;
-  deleteError.value = '';
+  deleteError.value = "";
   deleting.value = true;
   try {
     await deleteRegion(region);
     await refreshStorage();
   } catch (err) {
-    deleteError.value = err.message || 'Failed to delete region.';
+    deleteError.value = err.message || "Failed to delete region.";
   } finally {
     deleting.value = false;
   }
@@ -299,7 +326,7 @@ const removeRegion = async (region) => {
       :class="drawing ? 'btn-warning' : 'btn-primary'"
       @click="drawing ? stopDraw() : startDraw()"
     >
-      {{ drawing ? 'Drawing… (drag on map)' : 'Select region' }}
+      {{ drawing ? "Drawing… (drag on map)" : "Select region" }}
     </button>
 
     <!-- Draw overlay: teleported to body so it escapes the offcanvas's
@@ -323,7 +350,9 @@ const removeRegion = async (region) => {
     <!-- Zoom range -->
     <div class="row g-2 mb-3">
       <div class="col-6">
-        <label class="form-label small mb-1" for="offline-minzoom">Min zoom</label>
+        <label class="form-label small mb-1" for="offline-minzoom"
+          >Min zoom</label
+        >
         <input
           id="offline-minzoom"
           v-model.number="minZoom"
@@ -334,7 +363,9 @@ const removeRegion = async (region) => {
         />
       </div>
       <div class="col-6">
-        <label class="form-label small mb-1" for="offline-maxzoom">Max zoom</label>
+        <label class="form-label small mb-1" for="offline-maxzoom"
+          >Max zoom</label
+        >
         <input
           id="offline-maxzoom"
           v-model.number="maxZoom"
@@ -355,7 +386,9 @@ const removeRegion = async (region) => {
       Estimate size
     </button>
 
-    <div v-if="estimateError" class="small text-danger mb-2">{{ estimateError }}</div>
+    <div v-if="estimateError" class="small text-danger mb-2">
+      {{ estimateError }}
+    </div>
 
     <div
       v-if="estimateState"
@@ -391,11 +424,19 @@ const removeRegion = async (region) => {
           aria-valuemax="100"
         ></div>
       </div>
-      <div class="d-flex justify-content-between small text-body-secondary mb-2">
-        <span>{{ progress.done.toLocaleString() }} / {{ progress.total.toLocaleString() }}</span>
+      <div
+        class="d-flex justify-content-between small text-body-secondary mb-2"
+      >
+        <span
+          >{{ progress.done.toLocaleString() }} /
+          {{ progress.total.toLocaleString() }}</span
+        >
         <span>{{ progressPct }}%</span>
       </div>
-      <button class="btn btn-sm btn-outline-danger w-100" @click="cancelDownload">
+      <button
+        class="btn btn-sm btn-outline-danger w-100"
+        @click="cancelDownload"
+      >
         Cancel
       </button>
     </template>
@@ -408,14 +449,19 @@ const removeRegion = async (region) => {
       Download region
     </button>
 
-    <div v-if="downloadError" class="small text-danger mt-2">{{ downloadError }}</div>
+    <div v-if="downloadError" class="small text-danger mt-2">
+      {{ downloadError }}
+    </div>
 
     <!-- Storage summary -->
     <hr class="my-3 opacity-25" />
     <h6 class="text-body-secondary">Storage</h6>
     <div class="small text-body-secondary mb-1 d-flex justify-content-between">
-      <span>{{ formatBytes(storageInfo.usage) }} of {{ formatBytes(storageInfo.quota) }} used</span>
-      <span>{{ storageInfo.persisted ? 'Persistent' : 'May be cleared' }}</span>
+      <span
+        >{{ formatBytes(storageInfo.usage) }} of
+        {{ formatBytes(storageInfo.quota) }} used</span
+      >
+      <span>{{ storageInfo.persisted ? "Persistent" : "May be cleared" }}</span>
     </div>
     <div class="progress mb-3" style="height: 6px">
       <div
@@ -439,12 +485,16 @@ const removeRegion = async (region) => {
     <div v-for="region in regions" :key="region.id" class="border-top py-2">
       <div class="d-flex justify-content-between align-items-start small">
         <div>
-          <div><strong>{{ region.name }}</strong></div>
+          <div>
+            <strong>{{ region.name }}</strong>
+          </div>
           <div class="text-body-secondary">
-            z{{ region.minZoom }}–{{ region.maxZoom }} · {{ region.tileCount.toLocaleString() }} tiles
+            z{{ region.minZoom }}–{{ region.maxZoom }} ·
+            {{ region.tileCount.toLocaleString() }} tiles
           </div>
           <div class="text-body-tertiary">
-            {{ formatBytes(region.estimatedBytes) }} · {{ new Date(region.createdAt).toLocaleString() }}
+            {{ formatBytes(region.estimatedBytes) }} ·
+            {{ new Date(region.createdAt).toLocaleString() }}
           </div>
         </div>
         <div class="d-flex gap-1">
@@ -466,7 +516,9 @@ const removeRegion = async (region) => {
       </div>
     </div>
 
-    <div v-if="deleteError" class="small text-danger mt-2">{{ deleteError }}</div>
+    <div v-if="deleteError" class="small text-danger mt-2">
+      {{ deleteError }}
+    </div>
   </div>
 </template>
 

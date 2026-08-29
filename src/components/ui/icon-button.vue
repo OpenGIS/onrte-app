@@ -18,20 +18,12 @@ defineProps({
     class="icon-btn border-0 bg-transparent d-flex flex-column align-items-center"
     :id="id"
     :aria-pressed="active"
+    :style="iconColor !== 'currentColor' ? { color: iconColor } : undefined"
   >
     <div class="icon-btn__icon" :style="{ height: iconHeight + 'px' }">
-      <Icon
-        :width="iconWidth"
-        :height="iconHeight"
-        :fill="iconColor"
-        :name="icon"
-      />
+      <Icon :width="iconWidth" :height="iconHeight" :name="icon" />
     </div>
-    <span class="icon-btn__label" :style="{ color: iconColor }">{{
-      label
-    }}</span>
+    <span class="icon-btn__label">{{ label }}</span>
     <slot />
   </button>
 </template>
-
-

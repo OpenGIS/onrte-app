@@ -60,6 +60,12 @@ src/
       index.js          # Recordings feature — GPS track recording, GPX export
       RecordButton.vue  # toolbar button
       RecordingsPanel.vue # side panel
+    routes/
+      index.js          # Routes feature — GPX import, route rendering, offline navigation
+      gpx.js            # pure GPX parser (DOMParser, no dependencies)
+      RoutesPanel.vue   # side panel
+  utils/
+    geo.js              # shared geo helpers: haversine, totalDistance, formatDuration, formatDistance
   components/
     panels/
       about.vue         # About panel
@@ -158,6 +164,8 @@ Features are plain objects with an `install(ctx)` method. A feature lives in `sr
 | `docs/7.theme.md` | Bootstrap SCSS theme, green palette |
 | `docs/8.testing.md` | Unit and E2E testing conventions |
 | `docs/9.features.md` | Adding a core feature (internal plugin pattern) |
+| `docs/10.routes.md` | GPX routes: import, rendering, offline navigation |
+| `docs/10.offline.md` | Offline region download: service worker, tile enumeration, storage |
 
 ---
 

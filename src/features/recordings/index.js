@@ -1,60 +1,21 @@
 // recordings/index.js — Recordings core feature for On Route App
-import { reactive, ref, computed } from 'vue';
-import { useGeoJSON } from '@/composables/useGeoJSON.js';
-import { useLocate } from '@/composables/useLocate.js';
-import RecordButton from './RecordButton.vue';
-import RecordingsPanel from './RecordingsPanel.vue';
+import { reactive, ref, computed } from "vue";
+import { useGeoJSON } from "@/composables/useGeoJSON.js";
+import { useLocate } from "@/composables/useLocate.js";
+import {
+  haversine,
+  totalDistance,
+  formatDuration,
+  formatDistance,
+} from "@/utils/geo.js";
+import RecordButton from "./RecordButton.vue";
+import RecordingsPanel from "./RecordingsPanel.vue";
+
+export { formatDuration, formatDistance };
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Haversine distance between two { lat, lng } points, in metres. */
-function haversine(a, b) {
-  const R = 6_371_000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const sinLat = Math.sin(dLat / 2);
-  const sinLng = Math.sin(dLng / 2);
-  const h =
-    sinLat * sinLat +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-/** Total distance of an array of { lat, lng } points, in metres. */
-function totalDistance(points) {
-  let d = 0;
-  for (let i = 1; i < points.length; i++) {
-    d += haversine(points[i - 1], points[i]);
-  }
-  return d;
-}
-
-/** Format milliseconds as H:MM:SS or M:SS. */
-export function formatDuration(ms) {
-  const s = Math.floor(ms / 1000);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (n) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-}
-
-/** Format metres as a human-readable distance string, respecting unit preference. */
-export function formatDistance(metres, isMetric = true) {
-  if (isMetric) {
-    return metres >= 1000
-      ? `${(metres / 1000).toFixed(2)} km`
-      : `${Math.round(metres)} m`;
-  }
-  const feet = metres * 3.28084;
-  const miles = metres / 1609.344;
-  return miles >= 0.1
-    ? `${miles.toFixed(2)} mi`
-    : `${Math.round(feet)} ft`;
-}
 
 /** Convert a saved recording to a GPX XML string. */
 function toGPX(recording) {
@@ -64,27 +25,27 @@ function toGPX(recording) {
         `      <trkpt lat="${p.lat}" lon="${p.lng}">` +
         `<time>${new Date(p.t).toISOString()}</time></trkpt>`,
     )
-    .join('\n');
+    .join("\n");
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<gpx version="1.1" creator="On Route">',
-    '  <trk>',
+    "  <trk>",
     `    <name>Recording ${new Date(recording.timestamp).toLocaleString()}</name>`,
-    '    <trkseg>',
+    "    <trkseg>",
     pts,
-    '    </trkseg>',
-    '  </trk>',
-    '</gpx>',
-  ].join('\n');
+    "    </trkseg>",
+    "  </trk>",
+    "</gpx>",
+  ].join("\n");
 }
 
 // ---------------------------------------------------------------------------
 // Map layer constants
 // ---------------------------------------------------------------------------
 
-const COLOR_ACTIVE = '#39d353'; // app green
-const COLOR_PAUSED = '#6c757d'; // Bootstrap secondary grey
-const TRACK_ID = 'recordings-active-track';
+const COLOR_ACTIVE = "#39d353"; // app green
+const COLOR_PAUSED = "#6c757d"; // Bootstrap secondary grey
+const TRACK_ID = "recordings-active-track";
 
 // ---------------------------------------------------------------------------
 // Feature
@@ -92,7 +53,7 @@ const TRACK_ID = 'recordings-active-track';
 
 export const RecordingsFeature = {
   install({ useStorage, useSettings, getMap, instanceId, provide, addButton }) {
-    const stored = useStorage('recordings', { saved: [], active: null });
+    const stored = useStorage("recordings", { saved: [], active: null });
     const { isMetric } = useSettings();
     const { requestPermission } = useLocate(instanceId);
 
@@ -119,13 +80,13 @@ export const RecordingsFeature = {
         return;
       }
       geoJSON.setFeature({
-        type: 'Feature',
+        type: "Feature",
         id: TRACK_ID,
-        geometry: { type: 'LineString', coordinates: coords },
+        geometry: { type: "LineString", coordinates: coords },
         properties: {
-          'onrte.color': state.isPaused ? COLOR_PAUSED : COLOR_ACTIVE,
-          'onrte.width': 3,
-          'onrte.opacity': 0.85,
+          "onrte.color": state.isPaused ? COLOR_PAUSED : COLOR_ACTIVE,
+          "onrte.width": 3,
+          "onrte.opacity": 0.85,
         },
       });
     };
@@ -232,17 +193,21 @@ export const RecordingsFeature = {
 
     const downloadGPX = async (recording) => {
       const filename = `recording-${recording.id}.gpx`;
-      const blob = new Blob([toGPX(recording)], { type: 'application/gpx+xml' });
+      const blob = new Blob([toGPX(recording)], {
+        type: "application/gpx+xml",
+      });
 
       // Web Share API: best on mobile — triggers the native share sheet (iOS Save to Files, Android, etc.)
       if (navigator.share) {
-        const file = new File([blob], filename, { type: 'application/gpx+xml' });
+        const file = new File([blob], filename, {
+          type: "application/gpx+xml",
+        });
         if (!navigator.canShare || navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({ files: [file] });
             return;
           } catch (err) {
-            if (err.name === 'AbortError') return; // user cancelled share sheet
+            if (err.name === "AbortError") return; // user cancelled share sheet
             // share failed for another reason — fall through to anchor download
           }
         }
@@ -250,7 +215,7 @@ export const RecordingsFeature = {
 
       // Fallback: anchor download (desktop browsers)
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -262,13 +227,13 @@ export const RecordingsFeature = {
     const showOnMap = (recording) => {
       const coords = recording.points.map((p) => [p.lng, p.lat]);
       geoJSON.setFeature({
-        type: 'Feature',
+        type: "Feature",
         id: TRACK_ID,
-        geometry: { type: 'LineString', coordinates: coords },
+        geometry: { type: "LineString", coordinates: coords },
         properties: {
-          'onrte.color': COLOR_ACTIVE,
-          'onrte.width': 3,
-          'onrte.opacity': 0.85,
+          "onrte.color": COLOR_ACTIVE,
+          "onrte.width": 3,
+          "onrte.opacity": 0.85,
         },
       });
       const map = getMap();
@@ -291,7 +256,7 @@ export const RecordingsFeature = {
       updateLine();
     }
 
-    provide('recordings', {
+    provide("recordings", {
       state,
       elapsed,
       distance,
@@ -307,12 +272,12 @@ export const RecordingsFeature = {
     });
 
     addButton({
-      id: 'record',
-      icon: 'route',
-      position: 'middle',
+      id: "record",
+      icon: "route",
+      position: "middle",
       component: RecordButton,
       panel: {
-        title: 'Recordings',
+        title: "Recordings",
         component: RecordingsPanel,
       },
     });

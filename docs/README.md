@@ -20,4 +20,5 @@ Developer documentation for the On Route App codebase.
 | [7. Theme](./7.theme.md) | Bootstrap SCSS theme architecture and green palette |
 | [8. Testing](./8.testing.md) | Unit and E2E testing conventions |
 | [9. Features](./9.features.md) | Adding a core feature (internal plugin pattern) |
+| [10. Routes](./10.routes.md) | GPX import, route rendering, offline navigation |
 | [10. Offline](./10.offline.md) | Offline region download: service worker, tile enumeration, storage |

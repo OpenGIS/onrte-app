@@ -15,6 +15,7 @@ Built with the [OpenStreetMap](https://www.openstreetmap.org/) ecosystem. Specia
 - Globe view on first load
 - GPS locate with compass heading
 - Record GPS tracks and export as GPX
+- Import GPX routes and navigate offline
 - Download map regions for offline use (via a service worker)
 - Multilingual (auto-detects browser language)
 - Shareable map links

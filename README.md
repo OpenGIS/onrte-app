@@ -1,3 +1,8 @@
+> [!TIP]
+> Project archived, eaten by **[Waymark JS](https://github.com/OpenGIS/Waymark-JS)**.
+
+---
+
 # On Route App
 
 A navigation and mapping tool for everyone, right in the browser.
